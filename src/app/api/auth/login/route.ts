@@ -14,21 +14,27 @@ export async function POST(request: Request) {
             body: JSON.stringify(body),
         });
 
-        const data = await response.text().then((text) => (text ? JSON.parse(text) : {}));
+        const data = await response.json();
 
         if (!response.ok) {
             return NextResponse.json(
-                { message: data.detail?.[0]?.msg || "Login failed" },
+                { message: data.detail?.[0]?.msg || (data.detail ? data.detail : "Login failed") },
                 { status: response.status }
             );
         }
 
-        const res = NextResponse.json(data, { status: 200 });
+        // Create response
+        const res = NextResponse.json({ message: "Login successful" }, { status: 200 });
 
-        // Forward cookies if any (important for session/token based auth if using cookies)
-        const setCookieHeader = response.headers.get("set-cookie");
-        if (setCookieHeader) {
-            res.headers.set("Set-Cookie", setCookieHeader);
+        // Set HTTP-only cookie with the access token
+        if (data.access_token) {
+            res.cookies.set("session_token", data.access_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                path: "/",
+                maxAge: 60 * 60 * 24 * 7, // 1 week
+            });
         }
 
         return res;

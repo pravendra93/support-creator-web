@@ -29,10 +29,13 @@ const formSchema = z.object({
     }),
 })
 
+import { useAuth } from "@/context/auth-context";
+
 export function LoginForm() {
     const router = useRouter()
-    const [error, setError] = useState<string | null>(null)
+    const { checkAuth } = useAuth();
     const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -54,13 +57,13 @@ export function LoginForm() {
                 body: JSON.stringify(values),
             })
 
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}))
-                throw new Error(data.message || "Login failed")
+            if (response.ok) {
+                await checkAuth(); // Update auth context
+                router.push("/dashboard");
+            } else {
+                const data = await response.json();
+                setError(data.message || "Login failed");
             }
-
-            // Assuming successful login redirects to dashboard
-            router.push("/dashboard")
         } catch (err) {
             setError(err instanceof Error ? err.message : "Something went wrong")
         } finally {
@@ -108,7 +111,7 @@ export function LoginForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={isLoading}>
+                        <Button type="submit" className="w-full" disabled={isLoading} style={{ cursor: "pointer" }}>
                             {isLoading ? "Logging in..." : "Login"}
                         </Button>
                     </form>

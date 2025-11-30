@@ -42,6 +42,7 @@ const formSchema = z.object({
 export function RegisterForm() {
     const router = useRouter()
     const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -58,6 +59,7 @@ export function RegisterForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true)
         setError(null)
+        setSuccess(null)
         try {
             const response = await fetch("/api/auth/register", {
                 method: "POST",
@@ -77,7 +79,8 @@ export function RegisterForm() {
                 throw new Error(data.message || "Registration failed")
             }
 
-            router.push("/login")
+            setSuccess("Successfully registered. Please check your email to verify email.")
+            form.reset()
         } catch (err) {
             setError(err instanceof Error ? err.message : "Something went wrong")
         } finally {
@@ -97,6 +100,11 @@ export function RegisterForm() {
                         {error && (
                             <Alert variant="destructive">
                                 <AlertDescription>{error}</AlertDescription>
+                            </Alert>
+                        )}
+                        {success && (
+                            <Alert className="border-green-500 text-green-600">
+                                <AlertDescription>{success}</AlertDescription>
                             </Alert>
                         )}
                         <div className="grid grid-cols-2 gap-4">
@@ -166,7 +174,7 @@ export function RegisterForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={isLoading}>
+                        <Button type="submit" className="w-full" disabled={isLoading} style={{ cursor: "pointer" }}>
                             {isLoading ? "Creating account..." : "Sign Up"}
                         </Button>
                     </form>
