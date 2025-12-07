@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 import {
     LayoutDashboard,
     MessageSquare,
@@ -13,16 +14,18 @@ import {
 } from "lucide-react";
 
 const sidebarLinks = [
-    { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Chatbots", href: "/dashboard/chatbots", icon: Bot },
-    { name: "Conversations", href: "/dashboard/conversations", icon: MessageSquare },
-    { name: "Team", href: "/dashboard/team", icon: Users },
-    { name: "Billing", href: "/dashboard/billing", icon: CreditCard },
-    { name: "Settings", href: "/dashboard/settings", icon: Settings },
+    { name: "Overview", href: "/pages/dashboard", icon: LayoutDashboard },
+    { name: "Chatbots", href: "/pages/chatbots", icon: Bot },
+    { name: "Conversations", href: "/pages/conversations", icon: MessageSquare },
+    { name: "Teams", href: "/pages/team", icon: Users },
+    { name: "Billing", href: "/pages/billing", icon: CreditCard },
+    { name: "Coupons", href: "/pages/coupons", icon: Users, roles: ["super_admin"] },
+    { name: "Settings", href: "/pages/settings", icon: Settings },
 ];
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { user } = useAuth();
 
     return (
         <div className="hidden border-r bg-muted/40 md:block w-64 min-h-screen">
@@ -35,21 +38,23 @@ export function Sidebar() {
             </div>
             <div className="flex-1">
                 <nav className="grid items-start px-2 text-sm font-medium lg:px-4 mt-4">
-                    {sidebarLinks.map((link) => (
-                        <Link
-                            key={link.name}
-                            href={link.href}
-                            className={cn(
-                                "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
-                                pathname === link.href
-                                    ? "bg-muted text-primary"
-                                    : "text-muted-foreground"
-                            )}
-                        >
-                            <link.icon className="h-4 w-4" />
-                            {link.name}
-                        </Link>
-                    ))}
+                    {sidebarLinks
+                        .filter((link) => !link.roles || (user?.claims?.role && link.roles.includes(user.claims.role)))
+                        .map((link) => (
+                            <Link
+                                key={link.name}
+                                href={link.href}
+                                className={cn(
+                                    "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
+                                    pathname === link.href
+                                        ? "bg-muted text-primary"
+                                        : "text-muted-foreground"
+                                )}
+                            >
+                                <link.icon className="h-4 w-4" />
+                                {link.name}
+                            </Link>
+                        ))}
                 </nav>
             </div>
         </div>
