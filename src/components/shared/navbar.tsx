@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 
 export default function Navbar() {
@@ -32,10 +32,10 @@ export default function Navbar() {
           ))}
           <div className="flex items-center space-x-4">
             <Link href="/login">
-              <Button variant="ghost">Log in</Button>
+              <Button variant="ghost" className="cursor-pointer">Log in</Button>
             </Link>
             <Link href="/register">
-              <Button>Get Started</Button>
+              <Button className="cursor-pointer">Get Started</Button>
             </Link>
           </div>
         </div>
@@ -44,12 +44,14 @@ export default function Navbar() {
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="cursor-pointer">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
+              <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
+              <SheetDescription className="sr-only">Navigation links for mobile view</SheetDescription>
               <div className="flex flex-col space-y-4 mt-8">
                 {navLinks.map((link) => (
                   <Link
@@ -62,12 +64,12 @@ export default function Navbar() {
                 ))}
                 <hr className="my-4" />
                 <Link href="/login">
-                  <Button variant="ghost" className="w-full justify-start">
+                  <Button variant="ghost" className="w-full justify-start   cursor-pointer">
                     Log in
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button className="w-full justify-start">Get Started</Button>
+                  <Button className="w-full justify-start cursor-pointer">Get Started</Button>
                 </Link>
               </div>
             </SheetContent>
