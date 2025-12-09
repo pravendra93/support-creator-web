@@ -19,12 +19,45 @@ export default function SetupAccountPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+    const [alreadySetup, setAlreadySetup] = useState(false);
+    const [validatingToken, setValidatingToken] = useState(true);
 
     useEffect(() => {
         if (!token) {
             setError("Invalid or missing invitation token");
+            setValidatingToken(false);
+            return;
         }
+
+        // Validate token on page load
+        validateToken();
     }, [token]);
+
+    const validateToken = async () => {
+        try {
+            setValidatingToken(true);
+            const response = await fetch("/api/validate-token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 400 && data.message?.includes("already been used")) {
+                    setAlreadySetup(true);
+                } else if (response.status === 400) {
+                    setError(data.message || "Invalid or expired invitation token");
+                }
+            }
+            // If validation succeeds, just continue to show the form
+        } catch (err: any) {
+            setError("Failed to validate invitation token");
+        } finally {
+            setValidatingToken(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,6 +89,11 @@ export default function SetupAccountPage() {
             const data = await response.json();
 
             if (!response.ok) {
+                // Check if account is already set up
+                if (response.status === 400 && data.message?.includes("already been used")) {
+                    setAlreadySetup(true);
+                    return;
+                }
                 throw new Error(data.message || "Failed to set up account");
             }
 
@@ -102,6 +140,51 @@ export default function SetupAccountPage() {
                         </p>
                         <p className="text-sm text-gray-500">
                             Redirecting to login...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (alreadySetup) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg">
+                    <div className="text-center">
+                        <CheckCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                            Account Already Set Up
+                        </h1>
+                        <p className="text-gray-600 mb-6">
+                            You've already completed your account setup. Please log in to continue.
+                        </p>
+                        <a
+                            href="/login"
+                            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        >
+                            Go to Login
+                        </a>
+                        <p className="text-sm text-gray-500 mt-4">
+                            If you forgot your password, you can reset it on the login page.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (validatingToken) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg">
+                    <div className="text-center">
+                        <Loader2 className="h-12 w-12 text-blue-500 mx-auto mb-4 animate-spin" />
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                            Validating Invitation
+                        </h1>
+                        <p className="text-gray-600">
+                            Please wait while we verify your invitation link...
                         </p>
                     </div>
                 </div>
