@@ -1,9 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+
   const navLinks = [
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
@@ -21,7 +27,7 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center space-x-6">
-          {navLinks.map((link) => (
+          {!isAuthPage && navLinks.map((link) => (
             <Link
               key={link.name}
               href={link.href}
@@ -53,7 +59,7 @@ export default function Navbar() {
               <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
               <SheetDescription className="sr-only">Navigation links for mobile view</SheetDescription>
               <div className="flex flex-col space-y-4 mt-8">
-                {navLinks.map((link) => (
+                {!isAuthPage && navLinks.map((link) => (
                   <Link
                     key={link.name}
                     href={link.href}
@@ -62,7 +68,7 @@ export default function Navbar() {
                     {link.name}
                   </Link>
                 ))}
-                <hr className="my-4" />
+                {!isAuthPage && <hr className="my-4" />}
                 <Link href="/login">
                   <Button variant="ghost" className="w-full justify-start   cursor-pointer">
                     Log in
