@@ -31,7 +31,7 @@ export default function TenantsPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || "Failed to fetch tenants");
+                throw new Error(data.message || "Failed to fetch workspaces");
             }
 
             setTenants(data);
@@ -54,7 +54,7 @@ export default function TenantsPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || "Failed to create tenant");
+                throw new Error(data.message || "Failed to create workspace");
             }
 
             setShowCreateModal(false);
@@ -103,17 +103,17 @@ export default function TenantsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Tenants</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Workspaces</h1>
                     <p className="text-muted-foreground mt-1">
                         Manage organizations and their configurations
                     </p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
                 >
                     <Plus className="h-4 w-4" />
-                    Create Tenant
+                    Add Workspace
                 </button>
             </div>
 
@@ -148,9 +148,9 @@ export default function TenantsPage() {
             {!loading && tenants.length === 0 && (
                 <div className="text-center py-12">
                     <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No tenants found</p>
+                    <p className="text-muted-foreground">No Workspaces found</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Create your first tenant to get started
+                        Create your first workspace to get started
                     </p>
                 </div>
             )}
@@ -207,7 +207,7 @@ function TenantCard({
                 </div>
                 <button
                     onClick={onEdit}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors"
+                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                 >
                     <Edit className="h-4 w-4" />
                 </button>
@@ -215,7 +215,7 @@ function TenantCard({
 
             <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Tenant ID:</span>
+                    <span className="text-muted-foreground">Workspace ID:</span>
                     <span className="font-mono text-xs">{tenant.id.slice(0, 8)}...</span>
                 </div>
                 {tenant.owner_account_id && (
@@ -309,14 +309,14 @@ function TenantModal({
             <div className="bg-background rounded-lg max-w-md w-full">
                 <div className="p-6 border-b">
                     <h2 className="text-2xl font-bold">
-                        {tenant ? "Edit Tenant" : "Create Tenant"}
+                        {tenant ? "Update Workspace" : "Create Workspace"}
                     </h2>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">
-                            Tenant Name *
+                            Workspace Name *
                         </label>
                         <input
                             type="text"
@@ -352,7 +352,7 @@ function TenantModal({
                         <p className="text-xs text-muted-foreground mt-1">
                             {loadingAccounts
                                 ? "Loading accounts..."
-                                : "Optional: Select the account that owns this tenant"}
+                                : "Optional: Select the account that owns this workspace"}
                         </p>
                     </div>
 

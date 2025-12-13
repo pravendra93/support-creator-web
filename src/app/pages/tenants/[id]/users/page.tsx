@@ -96,11 +96,11 @@ export default function TenantUsersPage() {
                         className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2 transition-colors"
                     >
                         <ArrowLeft className="h-4 w-4" />
-                        Back to Tenants
+                        Back to Workspaces
                     </button>
-                    <h1 className="text-3xl font-bold tracking-tight">Tenant Users</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Workspace Users</h1>
                     <p className="text-muted-foreground mt-1">
-                        Manage sub-users and team members for this tenant
+                        Manage sub-users and team members for this workspace
                     </p>
                 </div>
                 <button
@@ -266,7 +266,7 @@ function InviteUserModal({
                 <div className="p-6 border-b">
                     <h2 className="text-2xl font-bold">Invite User</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                        Send an invitation to join this tenant
+                        Send an invitation to join this workspace
                     </p>
                 </div>
 
@@ -301,7 +301,7 @@ function InviteUserModal({
                             <option value="viewer">Viewer</option>
                             <option value="admin">Admin</option>
                             <option value="sub_admin">Sub Admin</option>
-                            <option value="tenant_admin">Tenant Admin</option>
+                            <option value="tenant_admin">Workspace Admin</option>
                         </select>
                         <p className="text-xs text-muted-foreground mt-1">
                             Select the permission level for this user
