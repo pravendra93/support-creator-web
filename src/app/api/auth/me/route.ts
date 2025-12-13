@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { cookies } from "next/headers";
 
-const BACKEND_URL = "http://localhost:8000";
+import { BACKEND_URL } from "@/lib/config";
 
 export async function GET(request: Request) {
     try {

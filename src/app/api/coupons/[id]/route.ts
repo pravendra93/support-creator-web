@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const BACKEND_URL = "http://localhost:8000";
+import { BACKEND_URL } from "@/lib/config";
 
 export async function PATCH(
     request: Request,
