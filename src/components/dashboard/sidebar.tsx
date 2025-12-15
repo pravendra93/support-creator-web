@@ -42,7 +42,7 @@ export function Sidebar() {
             <div className="flex-1">
                 <nav className="grid items-start px-2 text-sm font-medium lg:px-4 mt-4">
                     {sidebarLinks
-                        .filter((link) => !link.roles || (user?.claims?.role && link.roles.includes(user.claims.role)))
+                        .filter((link) => !link.roles || (user?.role && link.roles.includes(user.role)))
                         .map((link) => (
                             <Link
                                 key={link.name}

@@ -4,19 +4,13 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter, usePathname } from "next/navigation";
 
 interface User {
-    account_id: string;
-    claims?: {
-        email?: string;
-        first_name?: string;
-        last_name?: string;
-        acct_type?: string;
-        role?: string;
-        sub?: string;
-        token_version?: number;
-        tv?: number;
-        iat?: number;
-        exp?: number;
-    };
+    id: string; // was account_id
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    role?: string;
+    is_active?: boolean;
+    created_at?: string;
 }
 
 interface AuthContextType {
