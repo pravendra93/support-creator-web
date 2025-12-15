@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-import { CONFIG } from "@/lib/config";
-
-const BACKEND_URL = CONFIG.BACKEND_URL;
+const BACKEND_URL = "http://localhost:8000";
 
 export async function POST(request: Request) {
     try {

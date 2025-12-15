@@ -6,7 +6,8 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        const response = await fetch(`${BACKEND_URL}/v1/auth/register`, {
+        // Forward to python backend
+        const response = await fetch(`${BACKEND_URL}/v1/logs/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -14,18 +15,14 @@ export async function POST(request: Request) {
             body: JSON.stringify(body),
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            return NextResponse.json(
-                { message: data.detail?.[0]?.msg || "Registration failed" },
-                { status: response.status }
-            );
+            console.error(`Backend logging failed: ${response.status}`);
+            return NextResponse.json({ message: "Failed to log to backend" }, { status: response.status });
         }
 
-        return NextResponse.json(data, { status: 200 });
+        return NextResponse.json({ status: "ok" });
     } catch (error) {
-        console.error("Register proxy error:", error);
+        console.error("Logging proxy error:", error);
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }

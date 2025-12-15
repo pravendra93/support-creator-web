@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-import { CONFIG } from "@/lib/config";
-
-const BACKEND_URL = CONFIG.BACKEND_URL;
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 // Get all users for a tenant
 export async function GET(
