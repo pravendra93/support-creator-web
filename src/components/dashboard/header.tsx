@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,8 +19,8 @@ export function Header() {
 
     const getInitials = () => {
         if (!user) return "JD";
-        const first = user.claims?.first_name?.[0] || "";
-        const last = user.claims?.last_name?.[0] || "";
+        const first = user.first_name?.[0] || "";
+        const last = user.last_name?.[0] || "";
         return (first + last).toUpperCase() || "U";
     };
 
@@ -41,8 +42,12 @@ export function Header() {
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>Settings</DropdownMenuItem>
-                    <DropdownMenuItem>Support</DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/pages/me" className="cursor-pointer">Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/pages/settings" className="cursor-pointer">Settings</Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
                 </DropdownMenuContent>
