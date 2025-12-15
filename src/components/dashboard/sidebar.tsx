@@ -11,7 +11,8 @@ import {
     CreditCard,
     Users,
     Bot,
-    Building2
+    Building2,
+    ScrollText
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -23,6 +24,7 @@ const sidebarLinks = [
     { name: "Workspaces", href: "/pages/tenants", icon: Building2, roles: ["super_admin"] },
     { name: "Coupons", href: "/pages/coupons", icon: Users, roles: ["super_admin"] },
     { name: "Plans", href: "/pages/plans", icon: CreditCard, roles: ["super_admin"] },
+    { name: "Logs", href: "/pages/logs", icon: ScrollText, roles: ["super_admin"] },
     { name: "Settings", href: "/pages/settings", icon: Settings },
 ];
 
