@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+import { CONFIG } from "@/lib/config";
+
+const BACKEND_URL = CONFIG.BACKEND_URL;
 
 export async function POST(request: Request) {
     try {
