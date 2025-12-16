@@ -17,7 +17,6 @@ import {
 
 const sidebarLinks = [
     { name: "Overview", href: "/pages/dashboard", icon: LayoutDashboard },
-    { name: "Chatbots", href: "/pages/chatbots", icon: Bot },
     { name: "Conversations", href: "/pages/conversations", icon: MessageSquare },
     { name: "Teams", href: "/pages/team", icon: Users },
     { name: "Billing", href: "/pages/billing", icon: CreditCard },
