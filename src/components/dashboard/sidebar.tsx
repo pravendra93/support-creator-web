@@ -36,7 +36,7 @@ export function Sidebar() {
             <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
                 <Link href="/" className="flex items-center gap-2 font-semibold">
                     <span className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-                        SupportAI
+                        AssistraAI
                     </span>
                 </Link>
             </div>

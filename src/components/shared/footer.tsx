@@ -8,7 +8,7 @@ export default function Footer() {
                     <div className="col-span-2 lg:col-span-2">
                         <Link href="/" className="flex items-center space-x-2">
                             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-                                SupportAI
+                                AssistraAI
                             </span>
                         </Link>
                         <p className="mt-4 text-sm text-muted-foreground max-w-xs">
@@ -40,7 +40,7 @@ export default function Footer() {
                     </div>
                 </div>
                 <div className="mt-12 border-t pt-8 text-center text-sm text-muted-foreground">
-                    © {new Date().getFullYear()} SupportAI. All rights reserved.
+                    © {new Date().getFullYear()} AssistraAI. All rights reserved.
                 </div>
             </div>
         </footer>
