@@ -8,7 +8,7 @@ export function proxy(request: NextRequest) {
     const sessionToken = request.cookies.get('session_token')?.value;
 
     // Check if the current path is a public path
-    const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
+    const isPublicPath = publicPaths.some((path) => pathname.startsWith(path)) || pathname === '/';
 
     // If the user is authenticated and trying to access a public path (like login),
     // redirect them to the dashboard
