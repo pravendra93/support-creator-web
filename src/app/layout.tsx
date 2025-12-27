@@ -6,7 +6,7 @@ import { AuthProvider } from "@/context/auth-context";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SupportAI - AI Customer Support for Travel Agencies",
+  title: "AssistraAI - AI Customer Support for Travel Agencies",
   description: "Deploy intelligent chatbots in minutes. Train on your data, customize branding, and delight your customers 24/7.",
 };
 
