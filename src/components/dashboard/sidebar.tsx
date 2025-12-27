@@ -20,7 +20,7 @@ const sidebarLinks = [
     { name: "Conversations", href: "/pages/conversations", icon: MessageSquare },
     { name: "Teams", href: "/pages/team", icon: Users },
     { name: "Billing", href: "/pages/billing", icon: CreditCard },
-    { name: "Workspaces", href: "/pages/tenants", icon: Building2, roles: ["super_admin"] },
+    { name: "Workspaces", href: "/pages/tenants", icon: Building2, roles: ["super_admin", "tenant_admin", 'sub_admin'] },
     { name: "Coupons", href: "/pages/coupons", icon: Users, roles: ["super_admin"] },
     { name: "Plans", href: "/pages/plans", icon: CreditCard, roles: ["super_admin"] },
     { name: "Logs", href: "/pages/logs", icon: ScrollText, roles: ["super_admin"] },
