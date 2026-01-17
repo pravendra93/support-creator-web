@@ -23,9 +23,9 @@ const sidebarLinks = [
     { name: "Teams", href: "/pages/team", icon: Users },
     { name: "Billing", href: "/pages/billing", icon: CreditCard },
     { name: "Workspaces", href: "/pages/tenants", icon: Building2, roles: ["super_admin", "platform_user", "tenant_admin"] },
-    { name: "Coupons", href: "/pages/coupons", icon: Users, roles: ["super_admin", "platform_user"] },
-    { name: "Plans", href: "/pages/plans", icon: CreditCard, roles: ["super_admin", "platform_user"] },
-    { name: "Logs", href: "/pages/logs", icon: ScrollText, roles: ["super_admin", "platform_user"] },
+    { name: "Coupons", href: "/pages/coupons", icon: Users, roles: ["super_admin"] },
+    { name: "Plans", href: "/pages/plans", icon: CreditCard, roles: ["super_admin"] },
+    { name: "Logs", href: "/pages/logs", icon: ScrollText, roles: ["super_admin"] },
     { name: "Settings", href: "/pages/settings", icon: Settings },
 ];
 
