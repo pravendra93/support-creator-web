@@ -12,11 +12,13 @@ import {
     Users,
     Bot,
     Building2,
-    ScrollText
+    ScrollText,
+    BookOpen
 } from "lucide-react";
 
 const sidebarLinks = [
     { name: "Overview", href: "/pages/dashboard", icon: LayoutDashboard },
+    { name: "Knowledge Base", href: "/pages/knowledge-base", icon: BookOpen },
     { name: "Conversations", href: "/pages/conversations", icon: MessageSquare },
     { name: "Teams", href: "/pages/team", icon: Users },
     { name: "Billing", href: "/pages/billing", icon: CreditCard },
