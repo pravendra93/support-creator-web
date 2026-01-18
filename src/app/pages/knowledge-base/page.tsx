@@ -33,13 +33,12 @@ export default function KnowledgeBasePage() {
     const urlTenantId = searchParams.get('tenantId');
     const { user } = useAuth(); // Assuming this is where user info is
 
-    // Fetch Tenants (Only if user is platform user/super admin)
-    // If regular tenant user, their tenant_id should be in their profile.
+    // Fetch Tenants based on user role
     useEffect(() => {
         const loadTenants = async () => {
             try {
-                // If user is super_admin or platform_user, fetch all tenants
                 if (user?.role === 'super_admin' || user?.role === 'platform_user') {
+                    // Admin users: fetch all tenants and show dropdown
                     const res = await fetch("/api/tenants");
                     if (res.ok) {
                         const data = await res.json();
@@ -53,16 +52,26 @@ export default function KnowledgeBasePage() {
                         }
                     }
                 } else {
-                    // Regular user: use their own tenant_id if available (not implemented in AuthContext yet but fetching files assumes we know it)
-                    // For now, if urlTenantId exists use it, otherwise show empty.
-                    if (urlTenantId) setSelectedTenantId(urlTenantId);
+                    // Regular users: fetch their own tenant only
+                    const res = await fetch("/api/tenants");
+                    if (res.ok) {
+                        const data = await res.json();
+                        // For regular users, the API should return only their tenant
+                        // but if it returns multiple, just take the first one
+                        if (data.length > 0) {
+                            setTenants([data[0]]); // Only show their tenant
+                            setSelectedTenantId(data[0].id);
+                        }
+                    }
                 }
             } catch (error) {
                 console.error("Failed to load tenants", error);
             }
         };
 
-        loadTenants();
+        if (user) {
+            loadTenants();
+        }
     }, [user, urlTenantId]);
 
     // FETCH FILES
