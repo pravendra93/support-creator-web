@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus } from "lucide-react";
+import { CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/knowledge-base/empty-state";
 import { FileList, KnowledgeBaseFile } from "@/components/knowledge-base/file-list";
@@ -32,7 +32,8 @@ export default function KnowledgeBasePage() {
             const newFile: KnowledgeBaseFile = {
                 id: Math.random().toString(36).substring(7),
                 name: file.name,
-                size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+                type: fileExtension.replace('.', '').toUpperCase(), // Add this
+                size: (file.size / (1024 * 1024)).toFixed(1) + " MB", // Changed from 2 to 1 decimal place to match design style
                 status: "in_progress",
                 uploadedAt: new Date(),
             };
@@ -52,14 +53,14 @@ export default function KnowledgeBasePage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
-                    <p className="text-muted-foreground">
-                        Manage your knowledge base files and resources.
+                    <p className="text-muted-foreground mt-1">
+                        Upload documents (PDF, CSV, DOCX) to train your AI agent.
                     </p>
                 </div>
                 {files.length > 0 && (
-                    <Button onClick={handleUploadClick} className="cursor-pointer">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Upload File
+                    <Button onClick={handleUploadClick} className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700">
+                        <CloudUpload className="h-4 w-4" />
+                        Upload Document
                     </Button>
                 )}
             </div>
