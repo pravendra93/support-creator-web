@@ -54,7 +54,7 @@ export default function KnowledgeBasePage() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
                     <p className="text-muted-foreground mt-1">
-                        Upload documents (PDF, CSV, DOCX) to train your AI agent.
+                        Upload documents (PDF, CSV) to train your AI agent.
                     </p>
                 </div>
                 {files.length > 0 && (
