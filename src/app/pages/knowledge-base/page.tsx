@@ -31,7 +31,7 @@ export default function KnowledgeBasePage() {
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const urlTenantId = searchParams.get('tenantId');
-    const { user } = useAuth(); // Assuming this is where user info is
+    const { user } = useAuth();
 
     // Fetch Tenants based on user role
     useEffect(() => {
@@ -182,7 +182,7 @@ export default function KnowledgeBasePage() {
             setFiles(prev => prev.map(f => f.id === tempId ? {
                 ...f,
                 id: confirmedFile.id,
-                status: 'done' // or whatever status backend returns
+                status: 'done'
             } : f));
 
             toast({
@@ -207,7 +207,6 @@ export default function KnowledgeBasePage() {
         }
     };
 
-
     return (
         <div className="flex flex-col gap-6 p-6">
             <input
@@ -221,8 +220,8 @@ export default function KnowledgeBasePage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
-                    <p className="text-muted-foreground">
-                        Manage your knowledge base files and resources.
+                    <p className="text-muted-foreground mt-1">
+                        Upload documents (PDF, CSV) to train your AI agent.
                     </p>
                 </div>
 
@@ -246,7 +245,7 @@ export default function KnowledgeBasePage() {
                     {(files.length > 0 || isLoading) && selectedTenantId && (
                         <Button onClick={handleUploadClick} disabled={isLoading} className="cursor-pointer">
                             <Plus className="mr-2 h-4 w-4" />
-                            {isLoading ? "Uploading..." : "Upload File"}
+                            {isLoading ? "Uploading..." : "Upload Document"}
                         </Button>
                     )}
                 </div>
