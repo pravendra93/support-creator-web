@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/knowledge-base/empty-state";
 import { FileList, KnowledgeBaseFile } from "@/components/knowledge-base/file-list";
@@ -37,11 +37,16 @@ export default function KnowledgeBasePage() {
     useEffect(() => {
         const loadTenants = async () => {
             try {
-                if (user?.role === 'super_admin' || user?.role === 'platform_user') {
+                console.log("[KB Page] User:", user);
+                console.log("[KB Page] Loading tenants...");
+
+                if (user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') {
+                    console.log("[KB Page] User is admin, fetching all tenants");
                     // Admin users: fetch all tenants and show dropdown
                     const res = await fetch("/api/tenants");
                     if (res.ok) {
                         const data = await res.json();
+                        console.log("[KB Page] Received tenants:", data);
                         setTenants(data);
 
                         // Auto-select if URL has tenant or default to first
@@ -69,8 +74,11 @@ export default function KnowledgeBasePage() {
             }
         };
 
+        console.log("[KB Page] useEffect triggered. User exists?", !!user);
         if (user) {
             loadTenants();
+        } else {
+            console.log("[KB Page] No user, skipping tenant load");
         }
     }, [user, urlTenantId]);
 
@@ -85,9 +93,11 @@ export default function KnowledgeBasePage() {
                 const mappedFiles: KnowledgeBaseFile[] = data.map((f: any) => ({
                     id: f.id,
                     name: f.file_name,
+                    type: f.file_type?.toUpperCase() || 'PDF',
                     size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
                     status: f.status === 'uploaded' ? 'done' : f.status === 'processing' ? 'chunking' : 'in_progress',
                     uploadedAt: new Date(f.created_at),
+                    storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`, // Construct URL if not provided
                 }));
                 setFiles(mappedFiles);
             }
@@ -101,6 +111,51 @@ export default function KnowledgeBasePage() {
             fetchFiles();
         }
     }, [selectedTenantId]);
+
+    const handleView = async (fileId: string) => {
+        try {
+            const res = await fetch(`/api/knowledge-base/${fileId}/view-url`);
+            if (res.ok) {
+                const data = await res.json();
+                window.open(data.view_url, '_blank');
+            } else {
+                throw new Error("Failed to get view URL");
+            }
+        } catch (error: any) {
+            console.error("View error:", error);
+            toast({
+                title: "View failed",
+                description: error.message || "Failed to open document.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleDelete = async (fileId: string) => {
+        try {
+            const res = await fetch(`/api/knowledge-base/${fileId}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                // Remove file from UI
+                setFiles(prev => prev.filter(f => f.id !== fileId));
+                toast({
+                    title: "File deleted",
+                    description: "Document has been removed from knowledge base.",
+                });
+            } else {
+                throw new Error("Failed to delete file");
+            }
+        } catch (error: any) {
+            console.error("Delete error:", error);
+            toast({
+                title: "Delete failed",
+                description: error.message || "Failed to delete document.",
+                variant: "destructive",
+            });
+        }
+    };
 
     const handleUploadClick = () => {
         fileInputRef.current?.click();
@@ -227,7 +282,7 @@ export default function KnowledgeBasePage() {
 
                 <div className="flex items-center gap-4">
                     {/* Tenant Selector for Platform Users */}
-                    {(user?.role === 'super_admin' || user?.role === 'platform_user') && tenants.length > 0 && (
+                    {(user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') && tenants.length > 0 && (
                         <Select value={selectedTenantId || ""} onValueChange={setSelectedTenantId}>
                             <SelectTrigger className="w-[200px]">
                                 <SelectValue placeholder="Select Tenant" />
@@ -242,9 +297,9 @@ export default function KnowledgeBasePage() {
                         </Select>
                     )}
 
-                    {(files.length > 0 || isLoading) && selectedTenantId && (
-                        <Button onClick={handleUploadClick} disabled={isLoading} className="cursor-pointer">
-                            <Plus className="mr-2 h-4 w-4" />
+                    {selectedTenantId && (
+                        <Button onClick={handleUploadClick} disabled={isLoading} className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700">
+                            <CloudUpload className="mr-2 h-4 w-4" />
                             {isLoading ? "Uploading..." : "Upload Document"}
                         </Button>
                     )}
@@ -258,7 +313,7 @@ export default function KnowledgeBasePage() {
             ) : files.length === 0 && !isLoading ? (
                 <EmptyState onUpload={handleUploadClick} />
             ) : (
-                <FileList files={files} />
+                <FileList files={files} onView={handleView} />
             )}
         </div>
     );

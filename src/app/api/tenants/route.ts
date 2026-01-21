@@ -26,8 +26,36 @@ export async function GET(request: Request) {
         const decoded = decodeJWT(token.value);
         const userRole = decoded?.role;
 
-        // Admins get all tenants
+        console.log("[Tenants API] User role:", userRole, "| Full decoded:", decoded);
+
+        // Super admins and platform users get ALL tenants
         if (userRole === 'super_admin' || userRole === 'platform_user') {
+            const response = await fetch(`${BACKEND_URL}/v1/tenants/admin/tenants`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token.value}`,
+                },
+            });
+
+            const data = await response.json();
+            console.log("[Tenants API] Backend response status:", response.status, "| Data:", data);
+
+            if (!response.ok) {
+                return NextResponse.json(
+                    { message: "Failed to fetch tenants" },
+                    { status: response.status }
+                );
+            }
+
+            return NextResponse.json(data, { status: 200 });
+        }
+
+        // Tenant admins get only THEIR tenants (filtered by owner_account_id)
+        if (userRole === 'tenant_admin') {
+            const userId = decoded?.sub;
+            console.log("[Tenants API] Tenant admin - filtering by owner_account_id:", userId);
+
             const response = await fetch(`${BACKEND_URL}/v1/tenants/admin/tenants`, {
                 method: "GET",
                 headers: {
@@ -45,8 +73,15 @@ export async function GET(request: Request) {
                 );
             }
 
-            return NextResponse.json(data, { status: 200 });
-        } else {
+            // Filter to only show tenants owned by this user
+            const myTenants = data.filter((tenant: any) => tenant.owner_account_id === userId);
+            console.log(`[Tenants API] Filtered ${myTenants.length} out of ${data.length} tenants for user ${userId}`);
+
+            return NextResponse.json(myTenants, { status: 200 });
+        }
+
+        // Regular users get their specific tenant
+        else {
             // Regular users: get user info to find their tenant
             const userResponse = await fetch(`${BACKEND_URL}/v1/auth/me`, {
                 method: "GET",
