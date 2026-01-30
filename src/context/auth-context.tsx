@@ -34,6 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const data = await response.json();
                 setUser(data);
             } else {
+                if (response.status === 401) {
+                    // Don't redirect if we're on a public path (like home page)
+                    const isPublicPath = ["/", "/login", "/register"].includes(window.location.pathname);
+                    if (!isPublicPath) {
+                        await logout(); // Clear cookies and redirect for protected paths
+                        return;
+                    }
+                }
                 setUser(null);
             }
         } catch (error) {
