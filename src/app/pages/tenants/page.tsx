@@ -173,13 +173,13 @@ function TenantCard({
             </div>
 
             <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-2">
-                <Link
+                {/* <Link
                     href={`/pages/tenants/${tenant.id}/users`}
                     className="flex items-center justify-center gap-2 text-sm p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-primary"
                 >
                     <Users className="h-4 w-4" />
                     Users
-                </Link>
+                </Link> */}
                 <Link
                     href={`/pages/tenants/${tenant.id}/chatbots`}
                     className="flex items-center justify-center gap-2 text-sm p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-primary"
