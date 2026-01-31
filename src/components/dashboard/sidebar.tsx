@@ -23,6 +23,7 @@ const sidebarLinks = [
     // { name: "Teams", href: "/pages/team", icon: Users },
     { name: "Billing", href: "/pages/billing", icon: CreditCard },
     { name: "Workspaces", href: "/pages/tenants", icon: Building2 },
+    { name: "API-KEY's", href: "/pages/api-keys", icon: ScrollText },
     { name: "Coupons", href: "/pages/coupons", icon: Users, roles: ["super_admin"] },
     { name: "Plans", href: "/pages/plans", icon: CreditCard, roles: ["super_admin"] },
     { name: "Logs", href: "/pages/logs", icon: ScrollText, roles: ["super_admin"] },
