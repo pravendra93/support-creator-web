@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/knowledge-base/empty-state";
@@ -21,7 +21,7 @@ interface Tenant {
     name: string;
 }
 
-export default function KnowledgeBasePage() {
+function KnowledgeBaseContent() {
     const [files, setFiles] = useState<KnowledgeBaseFile[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -316,5 +316,17 @@ export default function KnowledgeBasePage() {
                 <FileList files={files} onView={handleView} />
             )}
         </div>
+    );
+}
+
+export default function KnowledgeBasePage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen w-full items-center justify-center">
+                <p className="text-muted-foreground">Loading Knowledge Base...</p>
+            </div>
+        }>
+            <KnowledgeBaseContent />
+        </Suspense>
     );
 }
