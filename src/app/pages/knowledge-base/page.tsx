@@ -284,12 +284,12 @@ function KnowledgeBaseContent() {
                     {/* Tenant Selector for Platform Users */}
                     {(user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') && tenants.length > 0 && (
                         <Select value={selectedTenantId || ""} onValueChange={setSelectedTenantId}>
-                            <SelectTrigger className="w-[200px]">
+                            <SelectTrigger className="w-[200px] cursor-pointer">
                                 <SelectValue placeholder="Select Tenant" />
                             </SelectTrigger>
                             <SelectContent>
                                 {tenants.map((t) => (
-                                    <SelectItem key={t.id} value={t.id}>
+                                    <SelectItem key={t.id} value={t.id} className="cursor-pointer">
                                         {t.name}
                                     </SelectItem>
                                 ))}

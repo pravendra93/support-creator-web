@@ -107,7 +107,7 @@ export default function ApiKeysPage() {
                         Manage your API keys for programmatic access
                     </p>
                 </div>
-                <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary/90">
+                <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary/90 cursor-pointer">
                     <Plus className="mr-2 h-4 w-4" /> Create API-Key
                 </Button>
             </div>
@@ -122,7 +122,7 @@ export default function ApiKeysPage() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <Button variant="outline">
+                <Button variant="outline" className="cursor-pointer">
                     <Filter className="mr-2 h-4 w-4" /> Filter
                 </Button>
             </div>
