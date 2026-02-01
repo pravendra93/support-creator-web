@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import { CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/knowledge-base/empty-state";
+import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 import { FileList, KnowledgeBaseFile } from "@/components/knowledge-base/file-list";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/components/ui/use-toast";
@@ -25,6 +26,7 @@ function KnowledgeBaseContent() {
     const [files, setFiles] = useState<KnowledgeBaseFile[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [tenants, setTenants] = useState<Tenant[]>([]);
+    const [isLoadingTenants, setIsLoadingTenants] = useState(true);
     const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +41,7 @@ function KnowledgeBaseContent() {
             try {
                 console.log("[KB Page] User:", user);
                 console.log("[KB Page] Loading tenants...");
+                setIsLoadingTenants(true);
 
                 if (user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') {
                     console.log("[KB Page] User is admin, fetching all tenants");
@@ -71,6 +74,8 @@ function KnowledgeBaseContent() {
                 }
             } catch (error) {
                 console.error("Failed to load tenants", error);
+            } finally {
+                setIsLoadingTenants(false);
             }
         };
 
@@ -285,7 +290,7 @@ function KnowledgeBaseContent() {
                     {(user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') && tenants.length > 0 && (
                         <Select value={selectedTenantId || ""} onValueChange={setSelectedTenantId}>
                             <SelectTrigger className="w-[200px] cursor-pointer">
-                                <SelectValue placeholder="Select Tenant" />
+                                <SelectValue placeholder="Select Workspace" />
                             </SelectTrigger>
                             <SelectContent>
                                 {tenants.map((t) => (
@@ -307,9 +312,13 @@ function KnowledgeBaseContent() {
             </div>
 
             {!selectedTenantId ? (
-                <div className="flex h-64 w-full flex-col items-center justify-center rounded-lg border border-dashed text-center">
-                    <p className="text-muted-foreground">Please select a tenant to view knowledge base.</p>
-                </div>
+                tenants.length === 0 && !isLoadingTenants ? (
+                    <NoWorkspaceState message="You need a workspace to create and manage your knowledge base." />
+                ) : (
+                    <div className="flex h-64 w-full flex-col items-center justify-center rounded-lg border border-dashed text-center">
+                        <p className="text-muted-foreground">Please select a workspace to view knowledge base.</p>
+                    </div>
+                )
             ) : files.length === 0 && !isLoading ? (
                 <EmptyState onUpload={handleUploadClick} />
             ) : (
