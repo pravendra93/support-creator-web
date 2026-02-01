@@ -1,4 +1,4 @@
-import { FileText, Loader2, CheckCircle, Clock, Trash2 } from "lucide-react";
+import { FileText, Loader2, CheckCircle, Clock, Eye } from "lucide-react";
 import { format } from "date-fns";
 import {
     Table,
@@ -17,14 +17,15 @@ export interface KnowledgeBaseFile {
     id: string;
     name: string;
     size: string;
-    type: string;
+    type?: string;
     status: FileStatus;
     uploadedAt: Date;
+    storage_url?: string;
 }
 
 interface FileListProps {
     files: KnowledgeBaseFile[];
-    onDelete?: (id: string) => void;
+    onView?: (id: string) => void;
 }
 
 const statusMap: Record<FileStatus, { label: string; className: string; icon: React.ReactNode }> = {
@@ -45,7 +46,7 @@ const statusMap: Record<FileStatus, { label: string; className: string; icon: Re
     },
 };
 
-export function FileList({ files, onDelete }: FileListProps) {
+export function FileList({ files, onView }: FileListProps) {
     return (
         <div className="rounded-lg border bg-card shadow-sm">
             <Table>
@@ -90,11 +91,12 @@ export function FileList({ files, onDelete }: FileListProps) {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                    onClick={() => onDelete?.(file.id)}
+                                    className="h-8 w-8 text-muted-foreground hover:text-blue-600"
+                                    onClick={() => onView?.(file.id)}
+                                    title="View document"
                                 >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete</span>
+                                    <Eye className="h-4 w-4" />
+                                    <span className="sr-only">View</span>
                                 </Button>
                             </TableCell>
                         </TableRow>

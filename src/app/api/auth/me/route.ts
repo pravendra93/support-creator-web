@@ -21,11 +21,22 @@ export async function GET(request: Request) {
             },
         });
 
+        // Check if response is JSON
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error("Me proxy error: Non-JSON response from backend:", text);
+            return NextResponse.json(
+                { message: "Backend error: Invalid response format" },
+                { status: 500 }
+            );
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
             return NextResponse.json(
-                { message: data.detail?.[0]?.msg || "Failed to fetch user" },
+                { message: data.detail?.[0]?.msg || data.detail || "Failed to fetch user" },
                 { status: response.status }
             );
         }
