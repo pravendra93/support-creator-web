@@ -16,6 +16,7 @@ import {
 import { ApiKey } from "@/types/api-key";
 import { CreateApiKeyModal } from "@/components/api-keys/create-api-key-modal";
 import { AlertModal } from "@/components/modals/alert-modal";
+import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 
 export default function ApiKeysPage() {
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -23,6 +24,7 @@ export default function ApiKeysPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [hasTenants, setHasTenants] = useState<boolean | null>(null);
 
     // Delete Modal state
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -45,8 +47,21 @@ export default function ApiKeysPage() {
     }, []);
 
     useEffect(() => {
+        checkTenants();
         fetchApiKeys();
     }, [fetchApiKeys]);
+
+    const checkTenants = async () => {
+        try {
+            const response = await fetch("/api/tenants");
+            if (response.ok) {
+                const data = await response.json();
+                setHasTenants(Array.isArray(data) && data.length > 0);
+            }
+        } catch (error) {
+            console.error("Failed to check tenants:", error);
+        }
+    };
 
     const handleCopy = (key: string, id: string) => {
         navigator.clipboard.writeText(key);
@@ -107,9 +122,11 @@ export default function ApiKeysPage() {
                         Manage your API keys for programmatic access
                     </p>
                 </div>
-                <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary/90 cursor-pointer">
-                    <Plus className="mr-2 h-4 w-4" /> Create API-Key
-                </Button>
+                {hasTenants && (
+                    <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary/90 cursor-pointer">
+                        <Plus className="mr-2 h-4 w-4" /> Create API-Key
+                    </Button>
+                )}
             </div>
 
             <div className="flex items-center gap-4">
@@ -148,8 +165,14 @@ export default function ApiKeysPage() {
                             </TableRow>
                         ) : filteredKeys.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    No API keys found.
+                                <TableCell colSpan={6} className="h-96 text-center p-0">
+                                    {hasTenants === false ? (
+                                        <NoWorkspaceState message="You need a workspace to create API keys." />
+                                    ) : (
+                                        <div className="flex h-full items-center justify-center">
+                                            No API keys found.
+                                        </div>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ) : (
