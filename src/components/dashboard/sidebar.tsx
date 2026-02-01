@@ -13,7 +13,8 @@ import {
     Bot,
     Building2,
     ScrollText,
-    BookOpen
+    BookOpen,
+    Activity
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -27,6 +28,7 @@ const sidebarLinks = [
     { name: "Coupons", href: "/pages/coupons", icon: Users, roles: ["super_admin"] },
     { name: "Plans", href: "/pages/plans", icon: CreditCard, roles: ["super_admin"] },
     { name: "Logs", href: "/pages/logs", icon: ScrollText, roles: ["super_admin"] },
+    { name: "Workers", href: "/pages/workers", icon: Activity }, // Requires import
     { name: "Settings", href: "/pages/settings", icon: Settings },
 ];
 
