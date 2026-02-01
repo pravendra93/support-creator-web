@@ -91,7 +91,7 @@ export function FileList({ files, onView }: FileListProps) {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-blue-600"
+                                    className="h-8 w-8 text-muted-foreground hover:text-blue-600 cursor-pointer"
                                     onClick={() => onView?.(file.id)}
                                     title="View document"
                                 >
