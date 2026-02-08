@@ -100,9 +100,10 @@ function KnowledgeBaseContent() {
                     name: f.file_name,
                     type: f.file_type?.toUpperCase() || 'PDF',
                     size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
-                    status: f.status === 'uploaded' ? 'done' : f.status === 'processing' ? 'chunking' : 'in_progress',
+                    status: f.status, // Use backend status directly
                     uploadedAt: new Date(f.created_at),
                     storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`, // Construct URL if not provided
+                    estimated_time: f.estimated_time
                 }));
                 setFiles(mappedFiles);
             }
@@ -157,6 +158,73 @@ function KnowledgeBaseContent() {
             toast({
                 title: "Delete failed",
                 description: error.message || "Failed to delete document.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleProcess = async (fileId: string) => {
+        try {
+            const res = await fetch(`/api/knowledge-base/${fileId}/process`, {
+                method: "POST",
+            });
+
+            if (res.ok) {
+                const updatedFile = await res.json();
+                // Update file status in UI
+                setFiles(prev => prev.map(f => f.id === fileId ? {
+                    ...f,
+                    status: updatedFile.status === 'uploaded' ? 'in_progress' : updatedFile.status
+                } : f));
+
+                toast({
+                    title: "Processing started",
+                    description: "Document is being processed in the background.",
+                });
+
+                // Refresh files after a delay to show updated status
+                setTimeout(() => fetchFiles(), 2000);
+            } else {
+                const error = await res.json();
+                throw new Error(error.error || "Failed to trigger processing");
+            }
+        } catch (error: any) {
+            console.error("Process error:", error);
+            toast({
+                title: "Processing failed",
+                description: error.message || "Failed to trigger document processing.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleStop = async (fileId: string) => {
+        try {
+            const res = await fetch(`/api/knowledge-base/${fileId}/stop`, {
+                method: "POST",
+            });
+
+            if (res.ok) {
+                const updatedFile = await res.json();
+                // Update file status in UI
+                setFiles(prev => prev.map(f => f.id === fileId ? {
+                    ...f,
+                    status: updatedFile.status
+                } : f));
+
+                toast({
+                    title: "Processing stopped",
+                    description: "Document processing has been cancelled.",
+                });
+            } else {
+                const error = await res.json();
+                throw new Error(error.error || "Failed to stop processing");
+            }
+        } catch (error: any) {
+            console.error("Stop error:", error);
+            toast({
+                title: "Stop failed",
+                description: error.message || "Failed to stop document processing.",
                 variant: "destructive",
             });
         }
@@ -322,7 +390,7 @@ function KnowledgeBaseContent() {
             ) : files.length === 0 && !isLoading ? (
                 <EmptyState onUpload={handleUploadClick} />
             ) : (
-                <FileList files={files} onView={handleView} />
+                <FileList files={files} onView={handleView} onProcess={handleProcess} onStop={handleStop} />
             )}
         </div>
     );
