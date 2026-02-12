@@ -193,7 +193,7 @@ export default function ApiKeysPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8"
+                                                className="h-8 w-8 cursor-pointer"
                                                 onClick={() => handleCopy(apiKey.key, apiKey.id)}
                                             >
                                                 {copiedId === apiKey.id ? (
@@ -219,7 +219,7 @@ export default function ApiKeysPage() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
                                             onClick={() => handleDeleteClick(apiKey)}
                                         >
                                             <Trash2 className="h-4 w-4" />
