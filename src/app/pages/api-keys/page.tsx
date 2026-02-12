@@ -190,7 +190,7 @@ export default function ApiKeysPage() {
                                             <code className="bg-muted px-2 py-1 rounded text-xs">
                                                 {apiKey.key.slice(0, 8)}...{apiKey.key.slice(-4)}
                                             </code>
-                                            <Button
+                                            {/* <Button
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8 cursor-pointer"
@@ -201,7 +201,7 @@ export default function ApiKeysPage() {
                                                 ) : (
                                                     <Copy className="h-3 w-3" />
                                                 )}
-                                            </Button>
+                                            </Button> */}
                                         </div>
                                     </TableCell>
                                     <TableCell>
