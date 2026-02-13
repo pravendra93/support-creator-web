@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Filter, Key, Copy, Check, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, Key, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,6 @@ export default function ApiKeysPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [copiedId, setCopiedId] = useState<string | null>(null);
     const [hasTenants, setHasTenants] = useState<boolean | null>(null);
 
     // Delete Modal state
@@ -63,11 +62,7 @@ export default function ApiKeysPage() {
         }
     };
 
-    const handleCopy = (key: string, id: string) => {
-        navigator.clipboard.writeText(key);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
+
 
     const handleDeleteClick = (apiKey: ApiKey) => {
         setKeyToDelete(apiKey);
@@ -186,23 +181,9 @@ export default function ApiKeysPage() {
                                     </TableCell>
                                     <TableCell>{apiKey.tenant_name || apiKey.tenant_id}</TableCell>
                                     <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <code className="bg-muted px-2 py-1 rounded text-xs">
-                                                {apiKey.key.slice(0, 8)}...{apiKey.key.slice(-4)}
-                                            </code>
-                                            {/* <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 cursor-pointer"
-                                                onClick={() => handleCopy(apiKey.key, apiKey.id)}
-                                            >
-                                                {copiedId === apiKey.id ? (
-                                                    <Check className="h-3 w-3 text-green-500" />
-                                                ) : (
-                                                    <Copy className="h-3 w-3" />
-                                                )}
-                                            </Button> */}
-                                        </div>
+                                        <code className="bg-muted px-2 py-1 rounded text-xs font-mono">
+                                            {apiKey.key}
+                                        </code>
                                     </TableCell>
                                     <TableCell>
                                         <Badge

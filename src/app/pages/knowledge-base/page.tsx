@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/knowledge-base/empty-state";
 import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 import { FileList, KnowledgeBaseFile } from "@/components/knowledge-base/file-list";
+import { UploadModal } from "@/components/knowledge-base/upload-modal";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchParams } from "next/navigation";
@@ -28,6 +29,7 @@ function KnowledgeBaseContent() {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [isLoadingTenants, setIsLoadingTenants] = useState(true);
     const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -231,22 +233,21 @@ function KnowledgeBaseContent() {
     };
 
     const handleUploadClick = () => {
-        fileInputRef.current?.click();
+        setIsUploadModalOpen(true);
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !selectedTenantId) return;
 
-        const validTypes = ['application/pdf', 'text/csv'];
-        // Check mime type or extension
-        const isPdf = file.name.toLowerCase().endsWith('.pdf');
-        const isCsv = file.name.toLowerCase().endsWith('.csv');
+        // Check extension
+        const validExtensions = ['.txt', '.doc', '.docx', '.pdf', '.csv'];
+        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
 
-        if (!isPdf && !isCsv) {
+        if (!validExtensions.includes(ext)) {
             toast({
                 title: "Invalid file type",
-                description: "Please upload a PDF or CSV file.",
+                description: "Please upload a TXT, DOC, DOCX, PDF, or CSV file.",
                 variant: "destructive",
             });
             return;
@@ -273,7 +274,7 @@ function KnowledgeBaseContent() {
                 body: JSON.stringify({
                     tenant_id: selectedTenantId,
                     file_name: file.name,
-                    file_type: isPdf ? 'pdf' : 'csv',
+                    file_type: ext.replace('.', ''),
                     file_size: file.size,
                     content_type: file.type || 'application/octet-stream'
                 })
@@ -341,15 +342,23 @@ function KnowledgeBaseContent() {
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept=".pdf,.csv"
+                accept=".txt,.doc,.docx,.pdf,.csv"
                 onChange={handleFileChange}
                 disabled={isLoading}
             />
+            {selectedTenantId && (
+                <UploadModal
+                    isOpen={isUploadModalOpen}
+                    onClose={() => setIsUploadModalOpen(false)}
+                    onUploadComplete={() => fetchFiles()}
+                    selectedTenantId={selectedTenantId}
+                />
+            )}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
                     <p className="text-muted-foreground mt-1">
-                        Upload documents (PDF, CSV) to train your AI agent.
+                        Upload documents (TXT, DOC, DOCX, PDF, CSV) to train your AI agent.
                     </p>
                 </div>
 

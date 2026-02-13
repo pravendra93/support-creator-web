@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Copy, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface ChatbotSettings {
     name: string;
@@ -17,6 +24,13 @@ interface ChatbotSettings {
     primary_color: string;
     background_color: string;
     position: string;
+}
+
+interface ApiKeyItem {
+    id: string;
+    name: string;
+    key: string;
+    is_active: boolean;
 }
 
 interface ChatBotConfigProps {
@@ -34,6 +48,10 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
+    const [selectedApiKey, setSelectedApiKey] = useState<string>("");
+    const [isLoadingKeys, setIsLoadingKeys] = useState(false);
+    const [isSnippetCopied, setIsSnippetCopied] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -51,6 +69,33 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
             }
         };
         fetchSettings();
+    }, [tenantId]);
+
+    // Fetch API keys for the tenant
+    useEffect(() => {
+        const fetchApiKeys = async () => {
+            setIsLoadingKeys(true);
+            try {
+                const res = await fetch("/api/api-keys");
+                if (res.ok) {
+                    const data = await res.json();
+                    const keys: ApiKeyItem[] = Array.isArray(data) ? data : (data.items || []);
+                    // Filter only active keys for this tenant
+                    const tenantKeys = keys.filter(
+                        (k: ApiKeyItem) => k.is_active
+                    );
+                    setApiKeys(tenantKeys);
+                    if (tenantKeys.length > 0) {
+                        setSelectedApiKey(tenantKeys[0].key);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch API keys:", error);
+            } finally {
+                setIsLoadingKeys(false);
+            }
+        };
+        fetchApiKeys();
     }, [tenantId]);
 
     const handleSave = async () => {
@@ -79,6 +124,21 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const getIntegrationSnippet = () => {
+        if (typeof window === "undefined") return "";
+        return `<script 
+  src="${window.location.protocol}//${window.location.host}/widget.js" 
+  data-api-key="${selectedApiKey}"
+  async>
+</script>`;
+    };
+
+    const handleCopySnippet = () => {
+        navigator.clipboard.writeText(getIntegrationSnippet());
+        setIsSnippetCopied(true);
+        setTimeout(() => setIsSnippetCopied(false), 2000);
     };
 
     if (isLoading) {
@@ -172,16 +232,60 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
                     <CardTitle className="text-blue-900">Integration Code</CardTitle>
                     <CardDescription className="text-blue-700">Add this script to your website's header or footer to enable the chatbot.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-[11px]">
-                        {`<script 
-  src="${window.location.protocol}//${window.location.host}/widget.js" 
-  data-tenant-id="${tenantId}"
-  async>
-</script>`}
-                    </pre>
+                <CardContent className="grid gap-4">
+                    {/* API Key Selector */}
+                    <div className="grid gap-2">
+                        <Label className="text-blue-900 font-medium">Select API Key</Label>
+                        {isLoadingKeys ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Loading API keys...
+                            </div>
+                        ) : apiKeys.length === 0 ? (
+                            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                                <AlertCircle className="h-4 w-4 shrink-0" />
+                                <span>No active API keys found. Please create an API key first from the <strong>API Keys</strong> page.</span>
+                            </div>
+                        ) : (
+                            <Select value={selectedApiKey} onValueChange={setSelectedApiKey}>
+                                <SelectTrigger className="bg-white border-blue-200">
+                                    <SelectValue placeholder="Select an API key" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {apiKeys.map((key) => (
+                                        <SelectItem key={key.id} value={key.key}>
+                                            {key.name} ({key.key.slice(0, 8)}...{key.key.slice(-4)})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </div>
+
+                    {/* Code Snippet */}
+                    {selectedApiKey && (
+                        <div className="relative">
+                            <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-[11px] pr-12">
+                                {getIntegrationSnippet()}
+                            </pre>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
+                                onClick={handleCopySnippet}
+                                title="Copy snippet"
+                            >
+                                {isSnippetCopied ? (
+                                    <Check className="h-4 w-4 text-green-400" />
+                                ) : (
+                                    <Copy className="h-4 w-4" />
+                                )}
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
     );
 }
+
