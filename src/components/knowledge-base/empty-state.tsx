@@ -52,7 +52,7 @@ export function EmptyState({ onUpload }: EmptyStateProps) {
                                 <span>SUPPORTED FORMATS FOR KNOWLEDGE BASE</span>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-                                Knowledge bases currently support text-based data, such as information in .pdf, .csv files.
+                                Knowledge bases currently support text-based data, such as information in .txt, .doc, .docx, .pdf, .csv files.
                             </p>
                         </div>
                     </div>
