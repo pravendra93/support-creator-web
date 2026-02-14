@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Copy, Check, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,8 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [apiKeyPrefix, setApiKeyPrefix] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -51,6 +53,29 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
             }
         };
         fetchSettings();
+    }, [tenantId]);
+
+    // Fetch API keys for this tenant to populate the embed snippet
+    useEffect(() => {
+        const fetchApiKeys = async () => {
+            try {
+                const res = await fetch("/api/api-keys");
+                if (res.ok) {
+                    const data = await res.json();
+                    const keys = Array.isArray(data) ? data : (data.items || []);
+                    // Find an active key for this tenant
+                    const activeKey = keys.find(
+                        (k: any) => k.tenant_id === tenantId && k.is_active
+                    );
+                    if (activeKey && activeKey.key) {
+                        setApiKeyPrefix(activeKey.key);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch API keys:", error);
+            }
+        };
+        fetchApiKeys();
     }, [tenantId]);
 
     const handleSave = async () => {
@@ -79,6 +104,19 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const embedCode = `<script 
+  src="https://dev.assistra.app/widget.js" 
+  data-api-key="${apiKeyPrefix || "YOUR_API_KEY"}"
+  async>
+</script>`;
+
+    const handleCopyEmbed = () => {
+        navigator.clipboard.writeText(embedCode);
+        setCopied(true);
+        toast({ title: "Copied!", description: "Embed code copied to clipboard." });
+        setTimeout(() => setCopied(false), 2000);
     };
 
     if (isLoading) {
@@ -170,18 +208,36 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
             <Card className="border-blue-100 bg-blue-50/50">
                 <CardHeader>
                     <CardTitle className="text-blue-900">Integration Code</CardTitle>
-                    <CardDescription className="text-blue-700">Add this script to your website's header or footer to enable the chatbot.</CardDescription>
+                    <CardDescription className="text-blue-700">
+                        Add this script tag to your website&apos;s HTML (before the closing <code className="bg-blue-100 px-1 rounded">&lt;/body&gt;</code> tag) to enable the chat widget.
+                    </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-[11px]">
-                        {`<script 
-  src="${window.location.protocol}//${window.location.host}/widget.js" 
-  data-tenant-id="${tenantId}"
-  async>
-</script>`}
-                    </pre>
+                <CardContent className="space-y-3">
+                    {!apiKeyPrefix && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+                            ⚠️ You need to create an API key first. Go to the <strong>API Keys</strong> page to generate one, then come back here.
+                        </div>
+                    )}
+                    <div className="relative">
+                        <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-[11px] pr-12">
+                            {embedCode}
+                        </pre>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
+                            onClick={handleCopyEmbed}
+                        >
+                            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm text-blue-700 mt-2">
+                        <ExternalLink className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <p>Once added, your visitors will see a chat bubble in the {settings.position === "bottom-left" ? "bottom-left" : "bottom-right"} corner of your website.</p>
+                    </div>
                 </CardContent>
             </Card>
         </div>
     );
 }
+

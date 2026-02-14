@@ -105,7 +105,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
     }
 
     const handleCopy = () => {
-        const code = `<script src="https://cdn.supportai.com/widget.js" data-id="${tenantId}"></script>`
+        const code = `<script\n  src="https://dev.assistra.app/widget.js"\n  data-api-key="YOUR_API_KEY"\n  async>\n</script>`
         navigator.clipboard.writeText(code)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
@@ -333,7 +333,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
                                     </p>
                                     <div className="relative group">
                                         <div className="rounded-lg bg-slate-950 p-4 font-mono text-xs text-slate-50 overflow-x-auto border border-slate-800 shadow-sm">
-                                            {`<script src="https://cdn.supportai.com/widget.js" data-id="${tenantId}"></script>`}
+                                            {`<script\n  src="https://dev.assistra.app/widget.js"\n  data-api-key="YOUR_API_KEY"\n  async>\n</script>`}
                                         </div>
                                         <Button
                                             size="sm"

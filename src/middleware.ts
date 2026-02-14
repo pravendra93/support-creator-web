@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicPaths = ['/login', '/register', '/api/auth'];
+const publicPaths = ['/login', '/register', '/api/auth', '/setup-account'];
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -32,8 +32,8 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
-         * - public (public assets)
+         * - widget.js (embeddable chat widget)
          */
-        '/((?!_next/static|_next/image|favicon.ico|public).*)',
+        '/((?!_next/static|_next/image|favicon.ico|widget\\.js|widget-test\\.html).*)',
     ],
 };
