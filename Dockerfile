@@ -1,29 +1,26 @@
 # =====================
-# Dependencies stage
+# Dependencies
 # =====================
 FROM node:20-slim AS deps
 WORKDIR /app
-
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 
 # =====================
-# Build stage
+# Build
 # =====================
 FROM node:20-slim AS builder
 WORKDIR /app
-
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
 RUN npm run build
 
 
 # =====================
-# Runtime stage (tiny)
+# Runtime (TINY)
 # =====================
 FROM node:20-slim AS runner
 WORKDIR /app
@@ -31,17 +28,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create non-root user for security
 RUN useradd -m nextjs
 
-# Copy only needed files
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/.next ./.next
+# Only the standalone server + minimal deps
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
 
 USER nextjs
 
 EXPOSE 3000
-
-CMD ["npx", "next", "start", "-p", "3000", "-H", "0.0.0.0"]
+CMD ["node", "server.js"]
