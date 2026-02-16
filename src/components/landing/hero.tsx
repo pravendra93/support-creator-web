@@ -1,44 +1,52 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Bot } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
+import HeroSlider from "./hero-slider";
 
 export default function Hero() {
     return (
         <section className="relative overflow-hidden pt-16 md:pt-24 lg:pt-32 pb-16">
-            <div className="container px-4 md:px-6">
+            <div className="container">
                 <div className="flex flex-col items-center space-y-4 text-center">
-                    <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
-                        <span className="mr-1">🚀</span> Now in Public Beta
+                    <div className="inline-flex items-center rounded-full border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 px-4 py-1.5 text-sm font-medium text-purple-400 backdrop-blur-sm transition-colors">
+                        <Sparkles className="w-3.5 h-3.5 mr-2" />
+                        Now in Public Beta
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none bg-gradient-to-r from-gray-900 via-gray-700 to-gray-500 dark:from-white dark:via-white dark:to-slate-400 bg-clip-text text-transparent">
                         AI Support Agents for <br className="hidden md:inline" />
-                        Modern Travel Agencies
+                        <span className="bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 bg-clip-text text-transparent">
+                            Modern Businesses
+                        </span>
                     </h1>
                     <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-                        Deploy intelligent chatbots in minutes. Train on your data, customize branding, and delight your customers 24/7.
+                        Deploy intelligent chatbots trained on{" "}
+                        <span className="font-semibold text-foreground">your data</span>.
+                        Customize branding, and delight your customers 24/7 with instant, accurate answers.
                     </p>
-                    <div className="space-x-4">
+                    <div className="flex flex-col sm:flex-row gap-4 mt-2">
                         <Link href="/register">
-                            <Button size="lg" className="h-12 px-8">
+                            <Button
+                                size="lg"
+                                className="h-13 px-8 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/25 transition-all duration-300 hover:shadow-purple-500/40 hover:scale-[1.02] cursor-pointer"
+                            >
                                 Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </Link>
-                        <Link href="#demo">
-                            <Button variant="outline" size="lg" className="h-12 px-8">
-                                View Demo
+                        <Link href="#how-it-works">
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                className="h-13 px-8 rounded-xl border-white/10 hover:bg-white/5 transition-all duration-300 cursor-pointer"
+                            >
+                                See How It Works
                             </Button>
                         </Link>
                     </div>
                 </div>
 
-                {/* Visual Element / Placeholder for Dashboard Preview */}
-                <div className="mx-auto mt-16 max-w-5xl rounded-xl border bg-background p-4 shadow-2xl lg:p-8">
-                    <div className="aspect-video overflow-hidden rounded-lg border bg-muted/50 flex items-center justify-center">
-                        <div className="text-center">
-                            <Bot className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                            <p className="text-muted-foreground">Dashboard Preview / Chat Interface</p>
-                        </div>
-                    </div>
+                {/* Slider — replaces the old placeholder */}
+                <div className="mx-auto mt-16 max-w-5xl">
+                    <HeroSlider />
                 </div>
             </div>
 

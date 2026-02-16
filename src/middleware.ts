@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicPaths = ['/login', '/register', '/api/auth'];
+const publicPaths = ['/login', '/register', '/api/auth', '/setup-account', '/verify-email'];
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -34,6 +34,6 @@ export const config = {
          * - favicon.ico (favicon file)
          * - public (public assets)
          */
-        '/((?!_next/static|_next/image|favicon.ico|public).*)',
+        '/((?!_next/static|_next/image|favicon.ico|public|images/|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.webp$|.*\\.ico$).*)',
     ],
 };

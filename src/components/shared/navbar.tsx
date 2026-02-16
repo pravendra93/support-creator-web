@@ -12,15 +12,16 @@ export default function Navbar() {
 
   const navLinks = [
     { name: "Features", href: "#features" },
+    { name: "How It Works", href: "#how-it-works" },
     { name: "Pricing", href: "#pricing" },
     { name: "About", href: "#about" },
   ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-slate-950/80 backdrop-blur-xl supports-[backdrop-filter]:bg-slate-950/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
-          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+          <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
             AssistraAI
           </span>
         </Link>
@@ -31,17 +32,19 @@ export default function Navbar() {
             <Link
               key={link.name}
               href={link.href}
-              className="text-sm font-medium transition-colors hover:text-primary"
+              className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
             >
               {link.name}
             </Link>
           ))}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             <Link href="/login">
-              <Button variant="ghost" className="cursor-pointer">Log in</Button>
+              <Button variant="ghost" className="cursor-pointer text-slate-300 hover:text-white hover:bg-white/5">Log in</Button>
             </Link>
             <Link href="/register">
-              <Button className="cursor-pointer">Get Started</Button>
+              <Button className="cursor-pointer rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/20 transition-all duration-300 hover:shadow-purple-500/30 text-white border-0">
+                Get Started
+              </Button>
             </Link>
           </div>
         </div>
@@ -50,12 +53,12 @@ export default function Navbar() {
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="cursor-pointer">
+              <Button variant="ghost" size="icon" className="cursor-pointer text-slate-300">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right">
+            <SheetContent side="right" className="bg-slate-950 border-white/10">
               <SheetTitle className="sr-only">Mobile Menu</SheetTitle>
               <SheetDescription className="sr-only">Navigation links for mobile view</SheetDescription>
               <div className="flex flex-col space-y-4 mt-8">
@@ -63,19 +66,21 @@ export default function Navbar() {
                   <Link
                     key={link.name}
                     href={link.href}
-                    className="text-lg font-medium transition-colors hover:text-primary"
+                    className="text-lg font-medium text-slate-300 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
                 ))}
-                {!isAuthPage && <hr className="my-4" />}
+                {!isAuthPage && <hr className="my-4 border-white/10" />}
                 <Link href="/login">
-                  <Button variant="ghost" className="w-full justify-start   cursor-pointer">
+                  <Button variant="ghost" className="w-full justify-start cursor-pointer text-slate-300">
                     Log in
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button className="w-full justify-start cursor-pointer">Get Started</Button>
+                  <Button className="w-full justify-start cursor-pointer bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                    Get Started
+                  </Button>
                 </Link>
               </div>
             </SheetContent>
