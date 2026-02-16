@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Test Page</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        h1 {
+            margin-bottom: 16px;
+        }
+
+        p {
+            line-height: 1.6;
+            color: #64748b;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Widget Test Page</h1>
+    <p>This page demonstrates the Assistra chat widget. Look for the chat bubble in the bottom-right corner.</p>
+
+    <div class="card">
+        <h2>How it works</h2>
+        <p>The widget is loaded via a single script tag with your API key. It automatically fetches your chatbot
+            configuration (name, colors, welcome message) and renders a beautiful chat interface.</p>
+    </div>
+
+    <div class="card">
+        <h2>Integration Code</h2>
+        <pre style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;"><code>&lt;script 
+  src="https://dev.assistra.app/widget.js" 
+  data-api-key="sk_live_YOUR_KEY"
+  async&gt;
+&lt;/script&gt;</code></pre>
+    </div>
+
+    <!-- Assistra Chat Widget -->
+
+    <script src="/widget.js" data-api-key="sk_live_Ta915RwIU6Hixt0ysAT-Tl2aoVuWMWx-"
+        data-backend-url="http://localhost:8000" data-chat-url="http://localhost:8001" async>
+        </script>
+</body>
+
+</html>
