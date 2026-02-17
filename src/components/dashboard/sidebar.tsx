@@ -17,7 +17,7 @@ import {
     Activity
 } from "lucide-react";
 
-const sidebarLinks = [
+export const sidebarLinks = [
     { name: "Overview", href: "/pages/dashboard", icon: LayoutDashboard },
     { name: "Knowledge Base", href: "/pages/knowledge-base", icon: BookOpen },
     { name: "ChatBot", href: "/pages/chatbot", icon: Bot },
