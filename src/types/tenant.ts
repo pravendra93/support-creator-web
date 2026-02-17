@@ -2,6 +2,7 @@
 export interface Tenant {
     id: string;
     name: string;
+    domain: string;
     owner_account_id?: string;
     status: 'pending' | 'active' | 'suspended';
     plan: string;
@@ -11,6 +12,7 @@ export interface Tenant {
 
 export interface TenantCreate {
     name: string;
+    domain: string;
     owner_account_id?: string;
     status?: 'pending' | 'active' | 'suspended';
     plan?: string;
@@ -18,6 +20,7 @@ export interface TenantCreate {
 
 export interface TenantUpdate {
     name?: string;
+    domain?: string;
     owner_account_id?: string;
     status?: 'pending' | 'active' | 'suspended';
     plan?: string;
