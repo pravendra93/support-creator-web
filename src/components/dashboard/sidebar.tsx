@@ -14,13 +14,15 @@ import {
     Building2,
     ScrollText,
     BookOpen,
-    Activity
+    Activity,
+    Eye
 } from "lucide-react";
 
 export const sidebarLinks = [
     { name: "Overview", href: "/pages/dashboard", icon: LayoutDashboard },
     { name: "Knowledge Base", href: "/pages/knowledge-base", icon: BookOpen },
     { name: "ChatBot", href: "/pages/chatbot", icon: Bot },
+    { name: "Preview Bot", href: "/pages/preview-bot", icon: Eye, roles: ["platform_user", "super_admin"] },
     { name: "Conversations", href: "/pages/conversations", icon: MessageSquare },
     // { name: "Teams", href: "/pages/team", icon: Users },
     { name: "Billing", href: "/pages/billing", icon: CreditCard },
