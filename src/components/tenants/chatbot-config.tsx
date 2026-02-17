@@ -30,6 +30,7 @@ import { useState, useEffect } from "react"
 interface ChatbotConfigData {
     id?: string
     name: string
+    domain: string
     welcome_message: string
     is_active: boolean
     primary_color: string
@@ -46,6 +47,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
 
     const [config, setConfig] = useState<ChatbotConfigData>({
         name: "Support Assistant",
+        domain: "",
         welcome_message: "Hi! How can I help you today?",
         is_active: true,
         primary_color: "#000000",
@@ -63,6 +65,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
                     setConfig({
                         id: data.id,
                         name: data.name || "Support Assistant",
+                        domain: data.domain || "",
                         welcome_message: data.welcome_message || "Hi! How can I help you today?",
                         is_active: data.is_active ?? true,
                         primary_color: data.primary_color || "#000000",
@@ -169,6 +172,19 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
                                         />
                                         <p className="text-xs text-muted-foreground">
                                             This name will be displayed in the chat header.
+                                        </p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="domain">Chatbot Domain</Label>
+                                        <Input
+                                            id="domain"
+                                            value={config.domain}
+                                            onChange={(e) => setConfig({ ...config, domain: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                                            className="max-w-md"
+                                            placeholder="e.g. help-bot"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            The subdomain identifier for this chatbot.
                                         </p>
                                     </div>
                                     <div className="space-y-2">

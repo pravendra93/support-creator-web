@@ -15,6 +15,7 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
     const router = useRouter();
     const [formData, setFormData] = useState<TenantCreate>({
         name: initialData?.name || "",
+        domain: initialData?.domain || "",
         owner_account_id: initialData?.owner_account_id || "",
         status: initialData?.status || "pending",
         plan: initialData?.plan || "trial",
@@ -98,6 +99,25 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
 
             <div className="space-y-2">
                 <label className="text-sm font-medium">
+                    Workspace Domain *
+                </label>
+                <input
+                    type="text"
+                    required
+                    value={formData.domain}
+                    onChange={(e) =>
+                        setFormData({ ...formData, domain: e.target.value.toLowerCase().replace(/\s+/g, '-') })
+                    }
+                    placeholder="e.g., acme"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <p className="text-xs text-muted-foreground">
+                    This will be used for your custom workspace URL (e.g., domain.supportai.com)
+                </p>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium">
                     Owner Account
                 </label>
                 <select
@@ -161,14 +181,14 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
                 <button
                     type="button"
                     onClick={() => router.back()}
-                    className="px-4 py-2 border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+                    className="px-4 py-2 border rounded-lg hover:bg-muted transition-colors text-sm font-medium cursor-pointer"
                 >
                     Cancel
                 </button>
                 <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center gap-2"
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex items-center gap-2 cursor-pointer"
                 >
                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                     {isEditing ? "Update Workspace" : "Create Workspace"}

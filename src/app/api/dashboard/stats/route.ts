@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         }
 
     } catch (error) {
-        console.error("Dashboard stats proxy error:", error);
+        // console.error("Dashboard stats proxy error:", error);
         return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
     }
 }

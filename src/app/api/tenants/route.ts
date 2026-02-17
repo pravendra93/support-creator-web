@@ -39,7 +39,7 @@ export async function GET(request: Request) {
             });
 
             const data = await response.json();
-            console.log("[Tenants API] Backend response status:", response.status, "| Data:", data);
+            // console.log("[Tenants API] Backend response status:", response.status);
 
             if (!response.ok) {
                 return NextResponse.json(
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
         // Tenant admins get only THEIR tenants (filtered by owner_account_id)
         if (userRole === 'tenant_admin') {
             const userId = decoded?.sub;
-            console.log("[Tenants API] Tenant admin - filtering by owner_account_id:", userId);
+            // console.log("[Tenants API] Tenant admin - filtering by owner_account_id:", userId);
 
             const response = await fetch(`${BACKEND_URL}/v1/tenants/admin/tenants`, {
                 method: "GET",
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
             // Filter to only show tenants owned by this user
             const myTenants = data.filter((tenant: any) => tenant.owner_account_id === userId);
-            console.log(`[Tenants API] Filtered ${myTenants.length} out of ${data.length} tenants for user ${userId}`);
+            // console.log(`[Tenants API] Filtered ${myTenants.length} out of ${data.length} tenants for user ${userId}`);
 
             return NextResponse.json(myTenants, { status: 200 });
         }
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
             return NextResponse.json([], { status: 200 });
         }
     } catch (error) {
-        console.error("Tenants Proxy Error:", error);
+        // console.error("Tenants Proxy Error:", error);
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(data, { status: 201 });
     } catch (error) {
-        console.error("Create Tenant Proxy Error:", error);
+        // console.error("Create Tenant Proxy Error:", error);
         return NextResponse.json(
             { message: "Internal server error" },
             { status: 500 }

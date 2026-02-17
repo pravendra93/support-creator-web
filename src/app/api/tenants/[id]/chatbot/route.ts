@@ -37,7 +37,7 @@ export async function GET(
 
         return NextResponse.json(data, { status: 200 });
     } catch (error) {
-        console.error("Get chatbot config proxy error:", error);
+        // console.error("Get chatbot config proxy error:", error);
         return NextResponse.json({ message: "Internal server error" }, { status: 500 });
     }
 }
