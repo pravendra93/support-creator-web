@@ -352,6 +352,7 @@ function KnowledgeBaseContent() {
                     onClose={() => setIsUploadModalOpen(false)}
                     onUploadComplete={() => fetchFiles()}
                     selectedTenantId={selectedTenantId}
+                    tenantName={tenants.find(t => t.id === selectedTenantId)?.name}
                 />
             )}
             <div className="flex items-center justify-between">
