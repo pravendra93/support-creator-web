@@ -17,9 +17,9 @@ export function EmptyState({ onUpload }: EmptyStateProps) {
                     <p className="mb-4 mt-2 text-sm text-muted-foreground">
                         You haven&apos;t uploaded any files yet. Upload a file to get started.
                     </p>
-                    <Button onClick={onUpload} className="cursor-pointer">
+                    <Button onClick={onUpload} className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700">
                         <UploadCloud className="mr-2 h-4 w-4" />
-                        Upload File
+                        Upload Document
                     </Button>
                 </div>
             </div>

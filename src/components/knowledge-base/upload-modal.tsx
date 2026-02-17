@@ -19,6 +19,7 @@ interface UploadModalProps {
     onClose: () => void;
     onUploadComplete: () => void;
     selectedTenantId: string;
+    tenantName?: string;
 }
 
 const ACCEPTED_EXTENSIONS = [".txt", ".doc", ".docx", ".pdf", ".csv"];
@@ -53,6 +54,7 @@ export function UploadModal({
     onClose,
     onUploadComplete,
     selectedTenantId,
+    tenantName,
 }: UploadModalProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -103,7 +105,15 @@ export function UploadModal({
 
         setSelectedFile(file);
         setUploadComplete(false);
+        // Auto-start upload will be handled by useEffect
     };
+
+    // Auto-upload effect
+    React.useEffect(() => {
+        if (selectedFile && !isUploading && !uploadComplete) {
+            handleUpload();
+        }
+    }, [selectedFile]);
 
     const handleUpload = async () => {
         if (!selectedFile || !selectedTenantId) return;
@@ -207,7 +217,7 @@ export function UploadModal({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <CloudUpload className="h-5 w-5 text-blue-600" />
-                        Upload Document
+                        Upload Document {tenantName ? `- ${tenantName}` : ""}
                     </DialogTitle>
                     <DialogDescription>
                         Upload a document to your knowledge base. Supported formats: TXT, DOC, DOCX, PDF, CSV.
@@ -337,25 +347,7 @@ export function UploadModal({
                     >
                         Cancel
                     </Button>
-                    {selectedFile && !uploadComplete && (
-                        <Button
-                            onClick={handleUpload}
-                            disabled={isUploading}
-                            className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700"
-                        >
-                            {isUploading ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Uploading...
-                                </>
-                            ) : (
-                                <>
-                                    <CloudUpload className="h-4 w-4" />
-                                    Upload
-                                </>
-                            )}
-                        </Button>
-                    )}
+                    {/* Upload button removed as upload starts automatically */}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
