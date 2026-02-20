@@ -73,7 +73,7 @@ function deriveFeatureList(features: PlanFeatures | undefined | null): string[] 
 }
 
 // Plans that should be visually highlighted as "popular"
-const POPULAR_SLUGS = new Set(["pro-monthly", "pro-yearly"]);
+const POPULAR_SLUGS = new Set(["growth-plan", "pro-plan"]);
 
 // ─── component ───────────────────────────────────────────────────────────────
 
