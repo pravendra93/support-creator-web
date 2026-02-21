@@ -32,6 +32,11 @@ export interface PlanFeatures {
     [key: string]: any;
 }
 
+export interface TenantSettings {
+    name: string;
+    features: PlanFeatures;
+}
+
 // Plan types based on backend schema
 export interface Plan {
     id: string;

@@ -32,7 +32,7 @@ export const sidebarLinks = [
     { name: "Plans", href: "/pages/plans", icon: CreditCard, roles: ["super_admin"] },
     { name: "Logs", href: "/pages/logs", icon: ScrollText, roles: ["super_admin"] },
     // { name: "Workers", href: "/pages/workers", icon: Activity, roles: ["super_admin"] }, // Requires import
-    { name: "Settings", href: "/pages/settings", icon: Settings },
+    { name: "Settings", href: "/pages/settings", icon: Settings, roles: ["platform_user"] },
 ];
 
 export function Sidebar() {

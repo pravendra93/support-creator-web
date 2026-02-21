@@ -9,6 +9,7 @@ interface User {
     first_name?: string;
     last_name?: string;
     role?: string;
+    tenant_id?: string;
     is_active?: boolean;
     created_at?: string;
 }
