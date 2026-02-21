@@ -1,10 +1,10 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
-export default function PreviewEmbedPage() {
+function PreviewEmbedContent() {
     const searchParams = useSearchParams();
     const tenantIdInput = searchParams.get("tenant_id");
     const [tenantId, setTenantId] = useState<string | null>(null);
@@ -86,5 +86,17 @@ export default function PreviewEmbedPage() {
                 .animate-pulse-slow { animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
             `}</style>
         </div>
+    );
+}
+
+export default function PreviewEmbedPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen w-full items-center justify-center bg-[#1e293b] text-slate-500">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        }>
+            <PreviewEmbedContent />
+        </Suspense>
     );
 }
