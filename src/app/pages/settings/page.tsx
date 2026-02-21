@@ -23,18 +23,15 @@ export default function SettingsPage() {
     const [settings, setSettings] = useState<TenantSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [noTenant, setNoTenant] = useState(false);
 
     useEffect(() => {
         const fetchSettings = async () => {
-            console.log("[Settings] Current user object:", user);
-
             if (!user) {
-                console.log("[Settings] No user found, skipping fetch");
                 return;
             }
 
             if (!user.id) {
-                console.log("[Settings] User ID missing, skipping fetch");
                 return;
             }
 
@@ -42,8 +39,7 @@ export default function SettingsPage() {
                 const tenantId = user.tenant_id;
 
                 if (!tenantId) {
-                    console.error("[Settings] Tenant ID not found in user object");
-                    setError("Tenant ID not found. Please log in again.");
+                    setNoTenant(true);
                     setLoading(false);
                     return;
                 }
@@ -51,15 +47,12 @@ export default function SettingsPage() {
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    console.error("[Settings] API Error response:", errorData);
                     throw new Error(errorData.message || "Failed to fetch settings");
                 }
 
                 const data = await response.json();
-                console.log("[Settings] Success! Fetched settings:", data);
                 setSettings(data);
             } catch (err) {
-                console.error("[Settings] Catch block error:", err);
                 setError(err instanceof Error ? err.message : "An error occurred");
             } finally {
                 setLoading(false);
@@ -90,6 +83,23 @@ export default function SettingsPage() {
                 <div className="p-4 border border-destructive/50 bg-destructive/10 text-destructive rounded-lg flex items-center gap-3">
                     <XCircle className="w-5 h-5" />
                     <p>{error}</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (noTenant) {
+        return (
+            <div className="flex flex-col gap-6 pb-10">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+                    <p className="text-muted-foreground">Manage your plan and account preferences.</p>
+                </div>
+                <Separator />
+                <div className="mt-8 flex flex-col items-center justify-center p-8 border border-dashed rounded-xl bg-muted/10 text-center space-y-3">
+                    <Info className="w-10 h-10 text-muted-foreground" />
+                    <p className="text-lg font-medium">We don't have appropriate settings for you.</p>
+                    <p className="text-sm text-muted-foreground">You are not currently associated with a valid tenant plan.</p>
                 </div>
             </div>
         );
