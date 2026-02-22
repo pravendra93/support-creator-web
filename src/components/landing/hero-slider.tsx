@@ -88,7 +88,7 @@ export default function HeroSlider() {
                     ))}
 
                     {/* Text overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-10">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-10 min-h-[160px] md:min-h-[180px] flex flex-col justify-end">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="inline-flex items-center rounded-full bg-purple-500/20 border border-purple-500/30 px-3 py-1 text-xs font-medium text-purple-300 backdrop-blur-sm">
                                 Step {current + 1} of {slides.length}
