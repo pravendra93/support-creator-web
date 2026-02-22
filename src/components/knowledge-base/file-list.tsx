@@ -20,6 +20,7 @@ export interface KnowledgeBaseFile {
     type?: string;
     status: FileStatus;
     uploadedAt: Date;
+    workspaceName?: string;
     storage_url?: string;
     estimated_time?: number;
 }
@@ -75,7 +76,8 @@ export function FileList({ files, onView, onProcess, onStop }: FileListProps) {
             <Table>
                 <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableHead className="w-[40%] font-semibold text-xs uppercase text-muted-foreground">Document Name</TableHead>
+                        <TableHead className="w-[35%] font-semibold text-xs uppercase text-muted-foreground">Document Name</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Workspace</TableHead>
                         <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Type</TableHead>
                         <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Size</TableHead>
                         <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Status</TableHead>
@@ -96,6 +98,13 @@ export function FileList({ files, onView, onProcess, onStop }: FileListProps) {
                                             Uploaded on {format(file.uploadedAt, "yyyy-MM-dd")}
                                         </div>
                                     </div>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="rounded-lg px-2 py-0.5 text-[10px] font-bold bg-blue-500/5 text-blue-600 border-blue-500/20 uppercase tracking-tight">
+                                        {file.workspaceName || "System"}
+                                    </Badge>
                                 </div>
                             </TableCell>
                             <TableCell>

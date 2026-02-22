@@ -96,10 +96,14 @@ function KnowledgeBaseContent() {
             const res = await fetch(`/api/knowledge-base?tenant_id=${selectedTenantId}`);
             if (res.ok) {
                 const data = await res.json();
+                // Find current workspace name
+                const workspaceName = tenants.find(t => t.id === selectedTenantId)?.name || "Default";
+
                 // Map backend response to frontend interface
                 const mappedFiles: KnowledgeBaseFile[] = data.map((f: any) => ({
                     id: f.id,
                     name: f.file_name,
+                    workspaceName: workspaceName,
                     type: f.file_type?.toUpperCase() || 'PDF',
                     size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
                     status: f.status, // Use backend status directly
@@ -256,10 +260,13 @@ function KnowledgeBaseContent() {
         setIsLoading(true);
         const tempId = Math.random().toString();
 
+        const workspaceName = tenants.find(t => t.id === selectedTenantId)?.name || "Default";
+
         // Optimistic UI
         const tempFile: KnowledgeBaseFile = {
             id: tempId,
             name: file.name,
+            workspaceName: workspaceName,
             size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
             status: "in_progress",
             uploadedAt: new Date(),
@@ -346,15 +353,13 @@ function KnowledgeBaseContent() {
                 onChange={handleFileChange}
                 disabled={isLoading}
             />
-            {selectedTenantId && (
-                <UploadModal
-                    isOpen={isUploadModalOpen}
-                    onClose={() => setIsUploadModalOpen(false)}
-                    onUploadComplete={() => fetchFiles()}
-                    selectedTenantId={selectedTenantId}
-                    tenantName={tenants.find(t => t.id === selectedTenantId)?.name}
-                />
-            )}
+            <UploadModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onUploadComplete={() => fetchFiles()}
+                initialTenantId={selectedTenantId}
+                tenants={tenants}
+            />
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
@@ -364,39 +369,29 @@ function KnowledgeBaseContent() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Tenant Selector for Platform Users */}
-                    {(user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') && tenants.length > 0 && (
-                        <Select value={selectedTenantId || ""} onValueChange={setSelectedTenantId}>
-                            <SelectTrigger className="w-[200px] cursor-pointer">
-                                <SelectValue placeholder="Select Workspace" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {tenants.map((t) => (
-                                    <SelectItem key={t.id} value={t.id} className="cursor-pointer">
-                                        {t.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-
-                    {selectedTenantId && (
-                        <Button onClick={handleUploadClick} disabled={isLoading} className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700">
-                            <CloudUpload className="mr-2 h-4 w-4" />
+                    {tenants.length > 0 ? (
+                        <Button onClick={handleUploadClick} disabled={isLoading} className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700 h-11 px-8 rounded-xl font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-blue-900/20 border border-blue-500/50">
+                            <CloudUpload className="mr-2 h-5 w-5" />
                             {isLoading ? "Uploading..." : "Upload Document"}
                         </Button>
+                    ) : (
+                        !isLoadingTenants && (
+                            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                                <span>Create workspace first then you can upload docs</span>
+                            </div>
+                        )
                     )}
                 </div>
             </div>
 
-            {!selectedTenantId ? (
-                tenants.length === 0 && !isLoadingTenants ? (
-                    <NoWorkspaceState message="You need a workspace to create and manage your knowledge base." />
-                ) : (
-                    <div className="flex h-64 w-full flex-col items-center justify-center rounded-lg border border-dashed text-center">
-                        <p className="text-muted-foreground">Please select a workspace to view knowledge base.</p>
-                    </div>
-                )
+            {tenants.length === 0 && !isLoadingTenants ? (
+                <div className="mt-8">
+                    <NoWorkspaceState message="Create a workspace first then you can upload docs" />
+                </div>
+            ) : !selectedTenantId ? (
+                <div className="flex h-64 w-full flex-col items-center justify-center rounded-lg border border-dashed text-center mt-6">
+                    <p className="text-muted-foreground">Please select a workspace to view knowledge base.</p>
+                </div>
             ) : files.length === 0 && !isLoading ? (
                 <EmptyState onUpload={handleUploadClick} />
             ) : (
