@@ -46,7 +46,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
     const [config, setConfig] = useState<ChatbotConfigData>({
-        name: "Support Assistant",
+        name: "Assistra",
         domain: "",
         welcome_message: "Hi! How can I help you today?",
         is_active: true,
@@ -64,7 +64,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
                     const data = await res.json()
                     setConfig({
                         id: data.id,
-                        name: data.name || "Support Assistant",
+                        name: data.name || "Assistra",
                         domain: data.domain || "",
                         welcome_message: data.welcome_message || "Hi! How can I help you today?",
                         is_active: data.is_active ?? true,
