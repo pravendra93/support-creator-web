@@ -174,7 +174,7 @@ export default function Pricing() {
                             >
                                 {iv === "month" ? "Monthly" : "Yearly"}
                                 {iv === "year" && (
-                                    <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
+                                    <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-full">
                                         Save 20%
                                     </span>
                                 )}

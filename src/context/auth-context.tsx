@@ -66,12 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        if (["/login", "/register"].includes(pathname)) {
+        if (["/login", "/register", "/"].includes(pathname)) {
             setIsLoading(false);
             return;
         }
-        checkAuth();
-    }, [pathname]);
+        if (!user?.id) {
+            checkAuth();
+        }
+
+    }, [pathname, user]);
 
     return (
         <AuthContext.Provider value={{ user, isLoading, checkAuth, logout }}>
