@@ -39,7 +39,7 @@ interface ChatBotConfigProps {
 
 export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
     const [settings, setSettings] = useState<ChatbotSettings>({
-        name: "Support Assistant",
+        name: "Assistra",
         welcome_message: "Hi! How can I help you today?",
         is_active: true,
         primary_color: "#000000",

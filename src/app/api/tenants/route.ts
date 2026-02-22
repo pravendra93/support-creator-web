@@ -26,7 +26,6 @@ export async function GET(request: Request) {
         const decoded = decodeJWT(token.value);
         const userRole = decoded?.role;
 
-        console.log("[Tenants API] User role:", userRole, "| Full decoded:", decoded);
 
         // Super admins and platform users get ALL tenants
         if (userRole === 'super_admin' || userRole === 'platform_user') {
