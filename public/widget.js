@@ -36,7 +36,7 @@
   let ephemeralToken = null;
   let tenantId = TENANT_ID_ATTR || null;
 
-  const STYLES = `
+  const STYLES = `ddd
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
 
     #asst-web3-root {
