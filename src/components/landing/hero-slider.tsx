@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 const slides = [
     {
@@ -69,16 +70,17 @@ export default function HeroSlider() {
                         <div
                             key={index}
                             className={`absolute inset-0 transition-all duration-600 ease-in-out ${index === current
-                                ? "opacity-100 scale-100"
-                                : "opacity-0 scale-105"
+                                ? "opacity-100 scale-100 z-10"
+                                : "opacity-0 scale-105 z-0"
                                 }`}
                         >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <Image
                                 src={slide.src}
                                 alt={slide.alt}
-                                className="w-full h-full object-contain object-top bg-slate-900"
-                                loading={index === 0 ? "eager" : "lazy"}
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                className="object-contain object-top bg-slate-900"
+                                priority
                             />
                             {/* Gradient overlay at bottom for text */}
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
@@ -92,9 +94,9 @@ export default function HeroSlider() {
                                 Step {current + 1} of {slides.length}
                             </span>
                         </div>
-                        <h3 className="text-xl md:text-2xl font-bold text-white mb-1">
+                        <h2 className="text-xl md:text-2xl font-bold text-white mb-1">
                             {slides[current].title}
-                        </h3>
+                        </h2>
                         <p className="text-sm md:text-base text-slate-300 max-w-lg">
                             {slides[current].description}
                         </p>

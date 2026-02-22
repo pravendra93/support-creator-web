@@ -117,7 +117,7 @@ export default function HowItWorks() {
 
                                 <div className="relative">
                                     {/* Step number */}
-                                    <div className="text-xs font-mono text-slate-500 mb-4 tracking-widest">
+                                    <div className="text-xs font-mono text-slate-400 mb-4 tracking-widest">
                                         STEP {step.step}
                                     </div>
 

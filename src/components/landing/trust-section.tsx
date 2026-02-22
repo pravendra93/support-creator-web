@@ -66,7 +66,7 @@ export default function TrustSection() {
                         {trustedBy.map((brand) => (
                             <div
                                 key={brand}
-                                className="text-lg md:text-xl font-semibold text-slate-400/50 hover:text-slate-400 transition-colors duration-300 cursor-default"
+                                className="text-lg md:text-xl font-semibold text-slate-500 hover:text-slate-400 dark:text-slate-400/80 dark:hover:text-slate-300 transition-colors duration-300 cursor-default"
                             >
                                 {brand}
                             </div>
