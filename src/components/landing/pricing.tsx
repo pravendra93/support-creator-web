@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Plan, PlanFeatures } from "@/types/plan";
 
@@ -79,11 +79,9 @@ const POPULAR_SLUGS = new Set(["growth-plan", "pro-plan"]);
 
 type IntervalFilter = "month" | "year" | "one_time";
 
-export default function Pricing() {
+export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] }) {
     const [isVisible, setIsVisible] = useState(false);
-    const [plans, setPlans] = useState<Plan[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [plans] = useState<Plan[]>(initialPlans);
     const [intervalFilter, setIntervalFilter] = useState<IntervalFilter>("month");
     const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -99,32 +97,6 @@ export default function Pricing() {
         );
         observer.observe(ref);
         return () => observer.disconnect();
-    }, []);
-
-    // Fetch plans from the public API
-    useEffect(() => {
-        const controller = new AbortController();
-        setLoading(true);
-        setError(null);
-
-        fetch("/api/plans/public", { signal: controller.signal })
-            .then(async (res) => {
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(body.message ?? "Failed to load plans");
-                }
-                return res.json() as Promise<Plan[]>;
-            })
-            .then((data) => {
-                // Only show active plans
-                setPlans(data.filter((p) => p.active));
-            })
-            .catch((err) => {
-                if (err.name !== "AbortError") setError(err.message);
-            })
-            .finally(() => setLoading(false));
-
-        return () => controller.abort();
     }, []);
 
     // Determine which intervals are available so we can show/hide the toggle
@@ -160,7 +132,7 @@ export default function Pricing() {
                     </p>
                 </div>
 
-                <div className="w-full min-h-[1400px] md:min-h-[700px] flex flex-col">
+                <div className="w-full flex flex-col">
                     {/* Monthly / Yearly toggle */}
                     <div className="h-[60px] flex items-center justify-center mt-8">
                         {showToggle && (
@@ -186,110 +158,86 @@ export default function Pricing() {
                         )}
                     </div>
 
-                    {/* Loading state */}
-                    {loading && (
-                        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-slate-400">
-                            <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
-                            <span className="text-sm">Loading plans…</span>
-                        </div>
-                    )}
-
-                    {/* Error state */}
-                    {!loading && error && (
-                        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-slate-400">
-                            <AlertCircle className="w-8 h-8 text-red-400" />
-                            <span className="text-sm text-red-400">{error}</span>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="text-xs text-purple-400 underline underline-offset-2 hover:text-purple-300 cursor-pointer"
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    )}
-
                     {/* Plans grid */}
-                    {!loading && !error && (
-                        <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 py-12 md:grid-cols-3 lg:gap-8">
-                            {visiblePlans.map((plan, index) => {
-                                const popular = POPULAR_SLUGS.has(plan.slug);
-                                const features = deriveFeatureList(plan.features);
-                                const price = formatPrice(plan.price_cents, plan.interval);
-                                const suffix = intervalLabel(plan);
+                    <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 py-12 md:grid-cols-3 lg:gap-8">
+                        {visiblePlans.map((plan, index) => {
+                            const popular = POPULAR_SLUGS.has(plan.slug);
+                            const features = deriveFeatureList(plan.features);
+                            const price = formatPrice(plan.price_cents, plan.interval);
+                            const suffix = intervalLabel(plan);
 
-                                return (
-                                    <div
-                                        key={plan.id}
-                                        className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-                                            } ${popular
-                                                ? "border-purple-500/30 bg-gradient-to-b from-purple-500/5 to-transparent shadow-2xl shadow-purple-500/10 scale-[1.02]"
-                                                : "border-white/5 bg-slate-900/30 hover:border-white/15"
-                                            }`}
-                                        style={{ transitionDelay: `${index * 150}ms` }}
-                                    >
-                                        {popular && (
-                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                                <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-1 text-xs font-semibold text-white shadow-lg shadow-purple-500/25">
-                                                    Most Popular
-                                                </span>
-                                            </div>
+                            return (
+                                <div
+                                    key={plan.id}
+                                    className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+                                        } ${popular
+                                            ? "border-purple-500/30 bg-gradient-to-b from-purple-500/5 to-transparent shadow-2xl shadow-purple-500/10 scale-[1.02]"
+                                            : "border-white/5 bg-slate-900/30 hover:border-white/15"
+                                        }`}
+                                    style={{ transitionDelay: `${index * 150}ms` }}
+                                >
+                                    {popular && (
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                                            <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-1 text-xs font-semibold text-white shadow-lg shadow-purple-500/25">
+                                                Most Popular
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Title & description */}
+                                    <div className="mb-6">
+                                        <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                                        {plan.description && (
+                                            <p className="mt-1 text-sm text-slate-400">{plan.description}</p>
                                         )}
-
-                                        {/* Title & description */}
-                                        <div className="mb-6">
-                                            <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                                            {plan.description && (
-                                                <p className="mt-1 text-sm text-slate-400">{plan.description}</p>
-                                            )}
-                                        </div>
-
-                                        {/* Price */}
-                                        <div className="mb-6">
-                                            <span className="text-4xl font-bold text-white">{price}</span>
-                                            {suffix && (
-                                                <span className="text-sm text-muted-foreground">{suffix}</span>
-                                            )}
-                                            {plan.trial_days > 0 && plan.price_cents > 0 && (
-                                                <p className="mt-1 text-xs text-emerald-400">
-                                                    {plan.trial_days}-day free trial
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Feature list */}
-                                        <ul className="space-y-3 text-sm mb-8 flex-1">
-                                            {features.map((feature) => (
-                                                <li key={feature} className="flex items-start text-slate-300">
-                                                    <div
-                                                        className={`mr-3 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${popular
-                                                            ? "bg-purple-500/20 text-purple-400"
-                                                            : "bg-white/5 text-slate-400"
-                                                            }`}
-                                                    >
-                                                        <Check className="h-3 w-3" />
-                                                    </div>
-                                                    {feature}
-                                                </li>
-                                            ))}
-                                        </ul>
-
-                                        {/* CTA */}
-                                        <Link href="/register" className="w-full">
-                                            <Button
-                                                className={`w-full rounded-xl h-12 cursor-pointer transition-all duration-300 ${popular
-                                                    ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 text-white"
-                                                    : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"
-                                                    }`}
-                                                variant={popular ? "default" : "outline"}
-                                            >
-                                                {plan.price_cents === 0 ? "Get Started Free" : "Get Started"}
-                                            </Button>
-                                        </Link>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    )}
+
+                                    {/* Price */}
+                                    <div className="mb-6">
+                                        <span className="text-4xl font-bold text-white">{price}</span>
+                                        {suffix && (
+                                            <span className="text-sm text-muted-foreground">{suffix}</span>
+                                        )}
+                                        {plan.trial_days > 0 && plan.price_cents > 0 && (
+                                            <p className="mt-1 text-xs text-emerald-400">
+                                                {plan.trial_days}-day free trial
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Feature list */}
+                                    <ul className="space-y-3 text-sm mb-8 flex-1">
+                                        {features.map((feature) => (
+                                            <li key={feature} className="flex items-start text-slate-300">
+                                                <div
+                                                    className={`mr-3 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${popular
+                                                        ? "bg-purple-500/20 text-purple-400"
+                                                        : "bg-white/5 text-slate-400"
+                                                        }`}
+                                                >
+                                                    <Check className="h-3 w-3" />
+                                                </div>
+                                                {feature}
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    {/* CTA */}
+                                    <Link href="/register" className="w-full">
+                                        <Button
+                                            className={`w-full rounded-xl h-12 cursor-pointer transition-all duration-300 ${popular
+                                                ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 text-white"
+                                                : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"
+                                                }`}
+                                            variant={popular ? "default" : "outline"}
+                                        >
+                                            {plan.price_cents === 0 ? "Get Started Free" : "Get Started"}
+                                        </Button>
+                                    </Link>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </section>
