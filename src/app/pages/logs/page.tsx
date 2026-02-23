@@ -9,7 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 type LogsData = {
     app_logs: string;
     error_logs: string;
-    frontend_logs: string;
+    nginx_access: string;
+    nginx_error: string;
+    gunicorn: string;
 };
 
 const renderLogs = (rawLogs: string) => {
@@ -61,7 +63,7 @@ const renderLogs = (rawLogs: string) => {
 };
 
 export default function LogsPage() {
-    const [logs, setLogs] = useState<LogsData>({ app_logs: "", error_logs: "", frontend_logs: "" });
+    const [logs, setLogs] = useState<LogsData>({ app_logs: "", error_logs: "", nginx_access: "", nginx_error: "", gunicorn: "" });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>("app_logs");
@@ -79,7 +81,9 @@ export default function LogsPage() {
             setLogs({
                 app_logs: data.app_logs || "",
                 error_logs: data.error_logs || "",
-                frontend_logs: data.frontend_logs || "",
+                nginx_access: data.nginx_access || "",
+                nginx_error: data.nginx_error || "",
+                gunicorn: data.gunicorn || "",
             });
         } catch (err: any) {
             setError(err.message || "An unexpected error occurred.");
@@ -142,10 +146,12 @@ export default function LogsPage() {
                 <TabsList className="mb-4">
                     <TabsTrigger value="app_logs" className="cursor-pointer">App Logs</TabsTrigger>
                     <TabsTrigger value="error_logs" className="cursor-pointer">Errors</TabsTrigger>
-                    <TabsTrigger value="frontend_logs" className="cursor-pointer">Frontend Logs</TabsTrigger>
+                    <TabsTrigger value="nginx_access" className="cursor-pointer">Nginx Access</TabsTrigger>
+                    <TabsTrigger value="nginx_error" className="cursor-pointer">Nginx Error</TabsTrigger>
+                    <TabsTrigger value="gunicorn" className="cursor-pointer">Gunicorn</TabsTrigger>
                 </TabsList>
 
-                {(["app_logs", "error_logs", "frontend_logs"] as const).map((tab) => (
+                {(["app_logs", "error_logs", "nginx_access", "nginx_error", "gunicorn"] as const).map((tab) => (
                     <TabsContent key={tab} value={tab} className="m-0">
                         <Card className="border-secondary/50 shadow-md bg-zinc-950 text-zinc-50 dark:bg-zinc-950">
                             <CardHeader className="border-b border-zinc-800 bg-zinc-900/50">
@@ -154,7 +160,7 @@ export default function LogsPage() {
                                     <div className="h-3 w-3 rounded-full bg-yellow-500" />
                                     <div className="h-3 w-3 rounded-full bg-green-500" />
                                     <span className="ml-2 text-xs font-mono text-zinc-400">
-                                        {tab === "app_logs" ? "application.log" : tab === "error_logs" ? "error.log" : "frontend.log"}
+                                        {tab === "app_logs" ? "app.log" : tab === "error_logs" ? "errors.log" : tab === "nginx_access" ? "access.log" : tab === "nginx_error" ? "error.log" : "gunicorn.log"}
                                     </span>
                                 </div>
                             </CardHeader>
