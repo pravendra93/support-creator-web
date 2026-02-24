@@ -75,42 +75,44 @@ export function RazorpayPaymentModal({
             const loaded = await loadRazorpayScript();
             if (!loaded) throw new Error("Failed to load Razorpay SDK. Check your internet connection.");
 
-            // 2. Create order on server
-            const orderRes = await fetch("/api/payment/create-order", {
+            // 2. Create subscription on server
+            const subRes = await fetch("/api/payment/create-subscription", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    amount: priceInfo.amount,
-                    currency: priceInfo.currency,     // INR for Indians, USD otherwise
                     planId: plan.id,
-                    planName: plan.name,
-                    isIndia,
-                    originalCurrency: plan.currency,
-                    originalPriceCents: plan.price_cents,
+                    currency: priceInfo.currency,
                 }),
             });
 
-            const orderData = await orderRes.json();
-            if (!orderRes.ok) throw new Error(orderData.message || "Failed to create order");
+            const subData = await subRes.json();
+            if (!subRes.ok) throw new Error(subData.message || "Failed to create subscription");
 
-            // 3. Open Razorpay checkout – enable ALL payment methods for INR
+            // Validate sub ID prefix
+            if (!subData?.razorpay_subscription_id?.startsWith("sub_") || subData.razorpay_subscription_id === "sub_") {
+                console.error("Invalid subscription ID received:", subData);
+                throw new Error("Invalid subscription ID. Please contact support.");
+            }
+
+            // 3. Open Razorpay checkout for subscriptions
             await new Promise<void>((resolve, reject) => {
-                const isINROrder = orderData.currency === "INR";
-
-                const rzpConfig: Record<string, any> = {
-                    key: orderData.keyId,
-                    amount: orderData.amount,
-                    currency: orderData.currency,
-                    order_id: orderData.orderId,
+                const rzpConfig: Record<string, unknown> = {
+                    key: subData.razorpay_key_id,
+                    subscription_id: subData.razorpay_subscription_id,
                     name: "Assistra",
                     description: `${plan.name} Plan Subscription`,
+                    prefill: {
+                        name: "Test User",
+                        email: "test@assistra.app",
+                        contact: "9999999999"
+                    },
                     theme: {
                         color: "#6366f1",
                         hide_topbar: false,
                     },
                     handler: async (response: {
-                        razorpay_order_id: string;
                         razorpay_payment_id: string;
+                        razorpay_subscription_id: string;
                         razorpay_signature: string;
                     }) => {
                         try {
@@ -118,8 +120,8 @@ export function RazorpayPaymentModal({
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({
-                                    razorpay_order_id: response.razorpay_order_id,
                                     razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_subscription_id: response.razorpay_subscription_id,
                                     razorpay_signature: response.razorpay_signature,
                                     planId: plan.id,
                                 }),
@@ -129,61 +131,36 @@ export function RazorpayPaymentModal({
                             setStep("success");
                             onSuccess(response.razorpay_payment_id);
                             resolve();
-                        } catch (err: any) {
+                        } catch (err: unknown) {
                             reject(err);
                         }
                     },
                     modal: {
                         ondismiss: () => reject(new Error("Payment cancelled")),
-                        // Show all available payment methods
                         escape: true,
                         animation: true,
                     },
                 };
 
-                // For INR orders — explicitly enable all Indian payment methods
-                if (isINROrder) {
-                    rzpConfig.config = {
-                        display: {
-                            blocks: {
-                                upi: {
-                                    name: "UPI",
-                                    instruments: [
-                                        { method: "upi", flows: ["qr", "intent", "collect", "redirect"] },
-                                    ],
-                                },
-                                netbanking: {
-                                    name: "Net Banking",
-                                    instruments: [{ method: "netbanking" }],
-                                },
-                                card: {
-                                    name: "Cards",
-                                    instruments: [{ method: "card" }],
-                                },
-                                wallet: {
-                                    name: "Wallets",
-                                    instruments: [{ method: "wallet" }],
-                                },
-                            },
-                            sequence: ["block.upi", "block.card", "block.netbanking", "block.wallet"],
-                            preferences: { show_default_blocks: false },
-                        },
-                    };
-                }
+                // EXPERT DEBUGGING LOGS (Step 5 request):
+                console.log("📍 [CHECKOUT INIT] rzpConfig Key:", rzpConfig.key);
+                console.log("📍 [CHECKOUT INIT] rzpConfig Sub ID:", rzpConfig.subscription_id);
+                console.log("📍 [CHECKOUT INIT] Validating object:", rzpConfig);
 
                 const rzp = new window.Razorpay(rzpConfig);
 
-                rzp.on("payment.failed", (response: any) => {
+                rzp.on("payment.failed", (response: { error?: { description?: string } }) => {
                     reject(new Error(response.error?.description || "Payment failed"));
                 });
 
                 rzp.open();
             });
-        } catch (err: any) {
-            if (err?.message === "Payment cancelled") {
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+            if (errorMessage === "Payment cancelled") {
                 setStep("confirm");
             } else {
-                setErrorMsg(err?.message || "Something went wrong. Please try again.");
+                setErrorMsg(errorMessage);
                 setStep("error");
             }
         }

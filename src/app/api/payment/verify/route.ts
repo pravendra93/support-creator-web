@@ -5,14 +5,14 @@ import { BACKEND_URL } from "@/lib/config";
 export const runtime = "nodejs";
 
 async function verifyRazorpaySignature(
-    orderId: string,
+    subscriptionId: string,
     paymentId: string,
     signature: string,
     secret: string
 ): Promise<boolean> {
     const encoder = new TextEncoder();
     const keyData = encoder.encode(secret);
-    const messageData = encoder.encode(`${orderId}|${paymentId}`);
+    const messageData = encoder.encode(`${paymentId}|${subscriptionId}`);
 
     const cryptoKey = await crypto.subtle.importKey(
         "raw",
@@ -44,13 +44,13 @@ export async function POST(request: Request) {
 
         const body = await request.json();
         const {
-            razorpay_order_id,
+            razorpay_subscription_id,
             razorpay_payment_id,
             razorpay_signature,
             planId,
         } = body;
 
-        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !planId) {
+        if (!razorpay_subscription_id || !razorpay_payment_id || !razorpay_signature || !planId) {
             return NextResponse.json(
                 { message: "Missing required payment details" },
                 { status: 400 }
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
 
         // ---------- Verify HMAC-SHA256 signature ----------
         const isValid = await verifyRazorpaySignature(
-            razorpay_order_id,
+            razorpay_subscription_id,
             razorpay_payment_id,
             razorpay_signature,
             keySecret
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
                 body: JSON.stringify({
                     plan_id: planId,
                     payment_id: razorpay_payment_id,
-                    order_id: razorpay_order_id,
+                    subscription_id: razorpay_subscription_id,
                     signature: razorpay_signature,
                 }),
             }
