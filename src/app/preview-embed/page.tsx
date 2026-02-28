@@ -132,163 +132,11 @@ function PreviewEmbedContent() {
 
                 {/* Simulator Layout when Open */}
                 {isChatOpen ? (
-                    <div className="flex-1 flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        {/* 1. Workspace Name on TOP - Optimized Height */}
-                        <div className="px-6 py-4 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/20">
-                                    <Bot className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-lg font-black text-white tracking-tight">
-                                        {settings?.name || "AI Assistant"}
-                                    </h1>
-                                    <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-[0.2em] flex items-center gap-1.5 mt-0.5 opacity-80">
-                                        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        Online Protocol
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setIsChatOpen(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                            >
-                                <ChevronDown className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* 2. Tabs BELOW workspace name - Tighter padding */}
-                        <div className="px-6 py-2.5 bg-black/10 border-b border-white/5">
-                            <div className="flex max-w-[240px] p-0.5 bg-black/40 rounded-xl border border-white/5">
-                                <button
-                                    onClick={() => setActiveTab("chat")}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300",
-                                        activeTab === "chat" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20" : "text-slate-500 hover:text-slate-300"
-                                    )}
-                                >
-                                    <MessageSquare className="w-4 h-4" />
-                                    Chat
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab("audio")}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300",
-                                        activeTab === "audio" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20" : "text-slate-500 hover:text-slate-300"
-                                    )}
-                                >
-                                    <Mic className="w-4 h-4" />
-                                    Audio
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 3. Content Area */}
-                        <div className="flex-1 min-h-0 relative">
-                            {activeTab === "chat" ? (
-                                <div className="h-full flex flex-col">
-                                    {/* Chat Messages */}
-                                    <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                                        {messages.map((msg, i) => (
-                                            <div key={i} className={cn(
-                                                "flex gap-4 max-w-[85%] animate-in fade-in slide-in-from-bottom-3 duration-500",
-                                                msg.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"
-                                            )}>
-                                                <div className={cn(
-                                                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-lg",
-                                                    msg.role === "user" ? "bg-white/10 border border-white/10 text-slate-300" : "text-white"
-                                                )}
-                                                    style={msg.role === "bot" ? { backgroundColor: primaryColor } : {}}
-                                                >
-                                                    {msg.role === "user" ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-                                                </div>
-                                                <div className={cn(
-                                                    "px-5 py-3.5 rounded-2xl text-[13px] leading-relaxed shadow-xl",
-                                                    msg.role === "user"
-                                                        ? "bg-indigo-600/20 border border-indigo-500/30 text-white rounded-tr-none"
-                                                        : "bg-white/5 border border-white/[0.05] text-slate-200 rounded-tl-none"
-                                                )}>
-                                                    {msg.content}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {isTyping && (
-                                            <div className="flex gap-4 mr-auto max-w-[80%] animate-pulse">
-                                                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white" style={{ backgroundColor: primaryColor }}>
-                                                    <Bot className="w-5 h-5" />
-                                                </div>
-                                                <div className="px-5 py-3.5 bg-white/5 border border-white/10 rounded-2xl rounded-tl-none flex gap-1 items-center">
-                                                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce"></div>
-                                                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                                                    <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <div ref={scrollRef} />
-                                    </div>
-
-                                    {/* Chat Input Area - Tighter padding */}
-                                    <div className="px-6 py-5 bg-black/40 border-t border-white/5">
-                                        <div className="max-w-xl mx-auto relative group">
-                                            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl opacity-10 blur group-focus-within:opacity-30 transition duration-500"></div>
-                                            <div className="relative flex items-center gap-3 p-2 bg-[#0D1117] border border-white/10 rounded-2xl backdrop-blur-xl">
-                                                <input
-                                                    value={input}
-                                                    onChange={(e) => setInput(e.target.value)}
-                                                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                                                    disabled={isTyping}
-                                                    placeholder="Ask the AI anything..."
-                                                    className="flex-1 bg-transparent border-none outline-none text-white px-3 py-1.5 placeholder:text-slate-700 text-sm font-medium"
-                                                />
-                                                <button
-                                                    onClick={handleSend}
-                                                    disabled={!input.trim() || isTyping}
-                                                    className={cn(
-                                                        "w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-300",
-                                                        input.trim() && !isTyping ? "bg-indigo-600 text-white shadow-2xl shadow-indigo-600/40" : "bg-white/5 text-slate-700"
-                                                    )}
-                                                >
-                                                    <Send className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <p className="text-center text-[8px] font-black text-slate-700 uppercase tracking-[0.4em] mt-4">
-                                            Assistra Simulation Protocol
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                /* Audio Screen - Coming Soon - Simplified & Compact */
-                                <div className="h-full flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-700">
-                                    <div className="relative mb-6">
-                                        <div className="absolute -inset-6 bg-indigo-500/10 rounded-full blur-[30px] animate-pulse"></div>
-                                        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-xl border border-white/10">
-                                            <Mic className="w-8 h-8 text-white" />
-                                        </div>
-                                    </div>
-
-                                    <h3 className="text-2xl font-black text-white mb-3 uppercase tracking-tight">
-                                        Voice <span className="text-indigo-500">Intelligence</span>
-                                    </h3>
-
-                                    <div className="space-y-4 max-w-sm mx-auto">
-                                        <p className="text-slate-400 text-sm font-medium leading-relaxed">
-                                            We're working on a seamless voice layer for <span className="text-white">{settings?.name}</span>.
-                                        </p>
-                                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Launching Soon</span>
-                                        </div>
-                                    </div>
-
-                                    <p className="text-slate-600 text-[11px] mt-8 max-w-[240px]">
-                                        Talk to your agents naturally with zero latency. This feature is currently in internal alpha testing.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <>
+                        <script src={process.env.NEXT_PUBLIC_WIDGET_URL || process.env.WIDGET_URL || "https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/v1/widget.js"}
+                            data-api-key="sk_live_d_aOUcg4HX3UolCTbHN0bHTAwZDiyyCz" async>
+                        </script>
+                    </>
                 ) : (
                     /* Minimized Hub Content */
                     <div className="flex-1 flex flex-col items-center justify-center gap-10 animate-in fade-in zoom-in duration-700 px-12 text-center">
@@ -308,7 +156,7 @@ function PreviewEmbedContent() {
 
                         <button
                             onClick={() => setIsChatOpen(true)}
-                            className="px-12 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black shadow-3xl shadow-indigo-600/40 transition-all hover:scale-[1.05] active:scale-[0.95] uppercase tracking-[0.3em] text-xs border border-white/10"
+                            className="px-12 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black shadow-3xl shadow-indigo-600/40 transition-all hover:scale-[1.05] active:scale-[0.95] uppercase tracking-[0.3em] text-xs border border-white/10 cursor-pointer"
                         >
                             Establish Connection
                         </button>

@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
-import { Loader2, Sparkles, Layout, MessageSquare, Zap } from "lucide-react";
+import { Loader2, Sparkles, Layout, MessageSquare, Zap, ChevronDown } from "lucide-react";
 import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 
 import { ChatBotConfig } from "@/components/chatbot/chatbot-config";
@@ -49,7 +49,7 @@ function PreviewBotContent() {
     const tasks = [
         { id: "intro", title: "Introduction", icon: Sparkles },
         { id: "config", title: "Bot Config", icon: Zap },
-        { id: "voice", title: "Coming Soon", icon: Layout },
+        { id: "voice", title: "Voice Support", icon: Layout },
     ];
 
     return (
@@ -69,12 +69,27 @@ function PreviewBotContent() {
                 </div>
 
                 <div className="flex items-center gap-8">
-                    {selectedTenantId && (
+                    {selectedTenantId && tenants.length > 0 && (
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 opacity-60">Workspace</span>
-                            <div className="px-5 py-2.5 bg-[#13171F] border border-white/5 rounded-2xl text-slate-200 font-bold shadow-2xl ring-1 ring-white/5 flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                {tenants.find(t => t.id === selectedTenantId)?.name || "Default"}
+                            <div className="relative flex items-center bg-[#13171F] border border-white/5 rounded-2xl shadow-2xl ring-1 ring-white/5 overflow-hidden">
+                                <div className="pl-4 py-2.5 flex items-center pointer-events-none absolute left-0 z-10">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                </div>
+                                <select
+                                    className="appearance-none bg-transparent text-slate-200 font-bold py-2.5 pl-9 pr-10 focus:outline-none cursor-pointer w-full z-20"
+                                    value={selectedTenantId}
+                                    onChange={(e) => setSelectedTenantId(e.target.value)}
+                                >
+                                    {tenants.map(t => (
+                                        <option key={t.id} value={t.id} className="bg-[#13171F] text-slate-200 py-1">
+                                            {t.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-3 pointer-events-none z-10">
+                                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                                </div>
                             </div>
                         </div>
                     )}
@@ -102,7 +117,7 @@ function PreviewBotContent() {
                         key={task.id}
                         onClick={() => setActiveTask(task.id as any)}
                         className={cn(
-                            "flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300",
+                            "flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 cursor-pointer",
                             activeTask === task.id
                                 ? "bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]"
                                 : "bg-[#13171F] text-slate-400 hover:bg-[#1a1f29] hover:text-slate-200 border border-slate-800"

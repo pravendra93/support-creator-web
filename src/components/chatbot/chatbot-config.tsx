@@ -248,7 +248,7 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
                             </div>
                         ) : (
                             <Select value={selectedApiKey} onValueChange={setSelectedApiKey}>
-                                <SelectTrigger className="bg-white border-blue-200">
+                                <SelectTrigger className="border-blue-200">
                                     <SelectValue placeholder="Select an API key" />
                                 </SelectTrigger>
                                 <SelectContent>
