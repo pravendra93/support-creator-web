@@ -37,7 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } else {
                 if (response.status === 401) {
                     // Don't redirect if we're on a public path (like home page)
-                    const isPublicPath = ["/", "/login", "/register"].includes(window.location.pathname);
+                    const isPublicPath = ["/", "/login", "/register", "/forgot-password", "/reset-password"].includes(window.location.pathname)
+                        || window.location.pathname.startsWith("/reset-password");
                     if (!isPublicPath) {
                         await logout(); // Clear cookies and redirect for protected paths
                         return;
@@ -66,7 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        if (["/login", "/register", "/"].includes(pathname)) {
+        if (["/login", "/register", "/", "/forgot-password", "/reset-password"].includes(pathname)
+            || pathname.startsWith("/reset-password")) {
             setIsLoading(false);
             return;
         }

@@ -43,7 +43,7 @@ export default function TenantUsersPage() {
 
             setUsers(data);
             setError("");
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         } finally {
             setLoading(false);
@@ -68,7 +68,7 @@ export default function TenantUsersPage() {
             setSuccess("Invitation sent successfully!");
             setTimeout(() => setSuccess(""), 5000);
             fetchUsers();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         }
     };

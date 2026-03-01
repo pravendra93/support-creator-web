@@ -4,7 +4,7 @@ const BACKEND_URL = "http://localhost:8000";
 type LogLevel = 'info' | 'error' | 'warning' | 'debug';
 
 interface LogContext {
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 class Logger {

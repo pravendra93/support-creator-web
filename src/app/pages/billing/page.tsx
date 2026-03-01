@@ -60,7 +60,7 @@ export default function BillingPage() {
             if (!res.ok) throw new Error(data.message || "Failed to fetch plans");
             // Only show active plans to customers
             setPlans((data as Plan[]).filter((p) => p.active));
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         } finally {
             setLoading(false);

@@ -59,14 +59,14 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
         try {
             await onSubmit(submitData);
             router.push("/pages/tenants");
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message || "An error occurred");
         } finally {
             setSubmitting(false);
         }
     };
 
-    const getAccountDisplayName = (account: any) => {
+    const getAccountDisplayName = (account: unknown) => {
         if (account.first_name || account.last_name) {
             return `${account.first_name || ""} ${account.last_name || ""}`.trim();
         }

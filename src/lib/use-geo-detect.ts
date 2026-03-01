@@ -54,13 +54,16 @@ export function useGeoDetect(): GeoInfo {
 
         const isIndia = isIndiaByTz || isIndiaByLang;
 
-        setInfo({
-            isIndia,
-            currency: isIndia ? "INR" : "USD",
-            currencySymbol: isIndia ? "₹" : "$",
-            locale: isIndia ? "en-IN" : "en-US",
-            loading: false,
-        });
+        // Defer state update to avoid synchronous setState in the same effect
+        setTimeout(() => {
+            setInfo({
+                isIndia,
+                currency: isIndia ? "INR" : "USD",
+                currencySymbol: isIndia ? "₹" : "$",
+                locale: isIndia ? "en-IN" : "en-US",
+                loading: false,
+            });
+        }, 0);
     }, []);
 
     return info;

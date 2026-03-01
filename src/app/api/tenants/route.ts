@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { BACKEND_URL } from "@/lib/config";
 
 // Helper to decode JWT and get user role
-function decodeJWT(token: string): any {
+function decodeJWT(token: string): unknown {
     try {
         const payload = token.split('.')[1];
         return JSON.parse(Buffer.from(payload, 'base64').toString());
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
             }
 
             // Filter to only show tenants owned by this user
-            const myTenants = data.filter((tenant: any) => tenant.owner_account_id === userId);
+            const myTenants = data.filter((tenant: unknown) => tenant.owner_account_id === userId);
             // console.log(`[Tenants API] Filtered ${myTenants.length} out of ${data.length} tenants for user ${userId}`);
 
             return NextResponse.json(myTenants, { status: 200 });
