@@ -118,7 +118,7 @@ export async function POST(request: Request) {
             message: "Payment verified and plan activated successfully",
             subscription: activationData,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Payment verification error:", error);
         return NextResponse.json(
             { message: error?.message || "Payment verification failed" },

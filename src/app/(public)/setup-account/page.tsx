@@ -52,7 +52,7 @@ export default function SetupAccountPage() {
                 }
             }
             // If validation succeeds, just continue to show the form
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError("Failed to validate invitation token");
         } finally {
             setValidatingToken(false);
@@ -101,7 +101,7 @@ export default function SetupAccountPage() {
             setTimeout(() => {
                 router.push("/login?setup=success");
             }, 2000);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         } finally {
             setLoading(false);

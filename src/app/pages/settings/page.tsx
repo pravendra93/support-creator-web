@@ -109,7 +109,7 @@ export default function SettingsPage() {
 
     const { name, features } = settings;
 
-    const FeatureSection = ({ title, icon: Icon, children }: { title: string, icon: any, children: React.ReactNode }) => (
+    const FeatureSection = ({ title, icon: Icon, children }: { title: string, icon: unknown, children: React.ReactNode }) => (
         <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-card to-muted/50">
             <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">

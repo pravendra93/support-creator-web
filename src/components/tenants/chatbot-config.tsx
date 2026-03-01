@@ -100,7 +100,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
 
             setMessage({ type: 'success', text: "Changes saved successfully!" })
             setTimeout(() => setMessage(null), 3000)
-        } catch (error: any) {
+        } catch (error: unknown) {
             setMessage({ type: 'error', text: error.message || "Something went wrong" })
         } finally {
             setSaving(false)

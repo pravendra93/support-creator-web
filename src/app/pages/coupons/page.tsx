@@ -79,8 +79,8 @@ export default function CouponsPage() {
             // Based on route.ts proxying, it returns what backend returns.
             // If backend follows FastAPI pagination: { items: [], total: ... }
             const items = Array.isArray(data) ? data : (data.items || []);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const mappedItems = items.map((item: any) => ({
+             
+            const mappedItems = items.map((item: unknown) => ({
                 ...item,
                 times_used: item.current_uses || 0
             }));
