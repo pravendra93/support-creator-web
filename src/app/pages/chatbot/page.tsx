@@ -21,6 +21,9 @@ interface Tenant {
     name: string;
 }
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Bot } from "lucide-react";
+
 function ChatBotContent() {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [isLoadingTenants, setIsLoadingTenants] = useState(true);
@@ -59,31 +62,27 @@ function ChatBotContent() {
 
     return (
         <div className="flex flex-col gap-6 p-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">ChatBot Management</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Configure and test your chatbot with your knowledge base data.
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    {(user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') && tenants.length > 0 && (
-                        <Select value={selectedTenantId || ""} onValueChange={setSelectedTenantId}>
-                            <SelectTrigger className="w-[200px] cursor-pointer">
-                                <SelectValue placeholder="Select Workspace" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {tenants.map((t) => (
-                                    <SelectItem key={t.id} value={t.id} className="cursor-pointer">
-                                        {t.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                </div>
-            </div>
+            <PageHeader
+                title="AI Customization"
+                description="Configure and test your chatbot's personality and logic."
+                icon={Bot}
+                gradient="from-fuchsia-500 to-purple-600"
+                howItWorks="Tailor your AI's behavior to match your brand. In the 'Configuration' tab, you can set the system prompt (instructions), temperature (creativity level), and response style. The 'Playground' allows you to test these settings in real-time before deploying to your customers. Changes made here take effect instantly across all your embedded widgets."
+                actions={(user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') && tenants.length > 0 && (
+                    <Select value={selectedTenantId || ""} onValueChange={setSelectedTenantId}>
+                        <SelectTrigger className="w-[220px] bg-[#13171F] border-white/5 rounded-xl h-12 font-bold shadow-lg">
+                            <SelectValue placeholder="Select Workspace" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#13171F] border-white/5 text-white">
+                            {tenants.map((t) => (
+                                <SelectItem key={t.id} value={t.id} className="cursor-pointer hover:bg-white/5">
+                                    {t.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+            />
 
             {!selectedTenantId ? (
                 tenants.length === 0 && !isLoadingTenants ? (

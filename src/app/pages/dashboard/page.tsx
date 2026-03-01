@@ -6,6 +6,8 @@ import { Activity, MessageSquare, Users, Zap, Search, Clock, ArrowUpRight, Signa
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/context/auth-context";
 
+import { PageHeader } from "@/components/shared/page-header";
+
 export default function DashboardPage() {
     const { user } = useAuth();
     const [stats, setStats] = useState<any>(null);
@@ -46,26 +48,22 @@ export default function DashboardPage() {
 
     return (
         <div className="flex flex-col gap-6 p-4 md:p-8 animate-in fade-in duration-500">
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-slate-400 bg-clip-text text-transparent">
-                        {isSuperAdmin ? "Command Center" : `Welcome back, ${stats?.user_email ? stats.user_email.split('@')[0] : 'Creator'}!`}
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        {isSuperAdmin
-                            ? "System-wide operational overview."
-                            : "Here's what's happening in your workspace today."}
-                    </p>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium animate-pulse">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    System Online
-                </div>
-            </div>
+            <PageHeader
+                title={isSuperAdmin ? "Command Center" : `Welcome, ${stats?.user_email ? stats.user_email.split('@')[0] : 'Creator'}!`}
+                description={isSuperAdmin ? "System-wide operational overview." : "Here's what's happening in your workspace today."}
+                icon={LayoutGrid}
+                gradient="from-cyan-500 to-blue-600"
+                howItWorks="The dashboard provides a high-level view of your AI infrastructure. For regular users, you can monitor active bots, workspace count, and recent engagement. For administrators, this page provides hardware health, global tenant counts, and system-wide traffic signals. Use the 'Live Conversations' panel to watch real-time interactions."
+                actions={
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium animate-pulse">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        System Online
+                    </div>
+                }
+            />
 
             {/* Top Metrics Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

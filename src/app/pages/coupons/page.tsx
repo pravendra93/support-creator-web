@@ -41,6 +41,9 @@ interface Coupon {
     description?: string; // Added optional description
 }
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Ticket } from "lucide-react";
+
 export default function CouponsPage() {
     const [coupons, setCoupons] = useState<Coupon[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -74,13 +77,8 @@ export default function CouponsPage() {
                 throw new Error("Failed to fetch coupons");
             }
             const data = await response.json();
-            // Assuming the API returns a list of coupons directly or in a 'items' property
-            // Adjust according to actual API response structure if needed. 
-            // Based on route.ts proxying, it returns what backend returns.
-            // If backend follows FastAPI pagination: { items: [], total: ... }
             const items = Array.isArray(data) ? data : (data.items || []);
-             
-            const mappedItems = items.map((item: unknown) => ({
+            const mappedItems = items.map((item: any) => ({
                 ...item,
                 times_used: item.current_uses || 0
             }));
@@ -153,13 +151,11 @@ export default function CouponsPage() {
                 throw new Error(data.message || "Failed to delete coupon");
             }
 
-            // Refresh list
             fetchCoupons();
             setIsDeleteModalOpen(false);
             setCouponToDelete(null);
         } catch (error) {
             console.error("Delete error:", error);
-            // Optionally show error toast here
         } finally {
             setIsDeleting(false);
         }
@@ -167,9 +163,6 @@ export default function CouponsPage() {
 
     const handleSheetSuccess = () => {
         fetchCoupons();
-        // Sheet closing is handled by the sheet component calling onOpenChange(false) 
-        // or we can close it here if needed, but existing logic in sheet closes it.
-        // Actually, my sheet refactor calls setOpen(false) internally if successful using the prop setter.
     };
 
     return (
@@ -182,20 +175,27 @@ export default function CouponsPage() {
                 title="Delete Coupon"
                 description={`Are you sure you want to delete coupon "${couponToDelete?.coupon_code}"? This action cannot be undone.`}
             />
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight">
-                    Coupons Management
-                </h1>
-                <Button onClick={handleCreate} className="bg-blue-600 hover:bg-blue-700 cursor-pointer">
-                    <Plus className="mr-2 h-4 w-4" /> Create New Coupon
-                </Button>
-                <CreateCouponSheet
-                    open={isSheetOpen}
-                    onOpenChange={setIsSheetOpen}
-                    onSuccess={handleSheetSuccess}
-                    coupon={editingCoupon}
-                />
-            </div>
+
+            <PageHeader
+                title="Promotions & Coupons"
+                description="Create and manage discount codes for your customers."
+                icon={Ticket}
+                gradient="from-cyan-500 to-blue-600"
+                howItWorks="Coupons allowed you to offer discounts to your subscribers. You can set percentage-based or fixed-amount discounts, define validity periods, and limit the maximum number of uses. Coupons can be tracked in real-time to see how many customers have applied them to their plans. Use these for seasonal marketing or customer loyalty rewards."
+                actions={
+                    <>
+                        <Button onClick={handleCreate} className="bg-indigo-600 hover:bg-indigo-700 h-12 px-6 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 cursor-pointer">
+                            <Plus className="mr-2 h-4 w-4" /> Create New Coupon
+                        </Button>
+                        <CreateCouponSheet
+                            open={isSheetOpen}
+                            onOpenChange={setIsSheetOpen}
+                            onSuccess={handleSheetSuccess}
+                            coupon={editingCoupon}
+                        />
+                    </>
+                }
+            />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="relative">

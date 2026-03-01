@@ -35,9 +35,12 @@ interface ApiKeyItem {
 
 interface ChatBotConfigProps {
     tenantId: string;
+    apiKey?: string;
+    onApiKeyChange?: (key: string) => void;
+    onSaveSuccess?: () => void;
 }
 
-export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
+export function ChatBotConfig({ tenantId, apiKey, onApiKeyChange, onSaveSuccess }: ChatBotConfigProps) {
     const [settings, setSettings] = useState<ChatbotSettings>({
         name: "Assistra",
         welcome_message: "Hi! How can I help you today?",
@@ -49,10 +52,24 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
-    const [selectedApiKey, setSelectedApiKey] = useState<string>("");
+    const [selectedApiKey, setSelectedApiKey] = useState<string>(apiKey || "");
     const [isLoadingKeys, setIsLoadingKeys] = useState(false);
     const [isSnippetCopied, setIsSnippetCopied] = useState(false);
     const { toast } = useToast();
+
+    // Sync from parent
+    useEffect(() => {
+        if (apiKey !== undefined && apiKey !== selectedApiKey) {
+            setSelectedApiKey(apiKey);
+        }
+    }, [apiKey]);
+
+    // Notify parent
+    useEffect(() => {
+        if (onApiKeyChange) {
+            onApiKeyChange(selectedApiKey);
+        }
+    }, [selectedApiKey, onApiKeyChange]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -85,7 +102,7 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
                         (k: ApiKeyItem) => k.is_active
                     );
                     setApiKeys(tenantKeys);
-                    if (tenantKeys.length > 0) {
+                    if (tenantKeys.length > 0 && !selectedApiKey) {
                         setSelectedApiKey(tenantKeys[0].key);
                     }
                 }
@@ -112,6 +129,7 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
                     title: "Settings saved",
                     description: "Chatbot configuration updated successfully.",
                 });
+                if (onSaveSuccess) onSaveSuccess();
             } else {
                 throw new Error("Failed to save settings");
             }
@@ -127,9 +145,12 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
     };
 
     const getIntegrationSnippet = () => {
-        if (typeof window === "undefined") return "";
+        const widgetUrl =
+            process.env.NEXT_PUBLIC_WIDGET_URL ||
+            (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.host}/widget.js` : "http://localhost:3000/widget.js");
+
         return `<script 
-  src="${window.location.protocol}//${window.location.host}/widget.js" 
+  src="${widgetUrl}" 
   data-api-key="${selectedApiKey}"
   async>
 </script>`;
@@ -247,18 +268,40 @@ export function ChatBotConfig({ tenantId }: ChatBotConfigProps) {
                                 <span>No active API keys found. Please create an API key first from the <strong>API Keys</strong> page.</span>
                             </div>
                         ) : (
-                            <Select value={selectedApiKey} onValueChange={setSelectedApiKey}>
-                                <SelectTrigger className="border-blue-200">
-                                    <SelectValue placeholder="Select an API key" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {apiKeys.map((key) => (
-                                        <SelectItem key={key.id} value={key.key}>
-                                            {key.name} ({key.key.slice(0, 8)}...{key.key.slice(-4)})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="space-y-4">
+                                {!isLoadingKeys && apiKeys.length > 0 && (
+                                    <div className="grid gap-2">
+                                        <Label className="text-blue-900 font-medium">Auto-Select API Key</Label>
+                                        <Select value={selectedApiKey} onValueChange={setSelectedApiKey}>
+                                            <SelectTrigger className="border-blue-200 bg-white">
+                                                <SelectValue placeholder="Select an existing API key" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {apiKeys.map((key) => (
+                                                    <SelectItem key={key.id} value={key.key}>
+                                                        {key.name} ({key.key.slice(0, 8)}...{key.key.slice(-4)})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+
+                                <div className="grid gap-2">
+                                    <Label className="text-blue-900 font-medium">
+                                        {apiKeys.length > 0 ? "Or Manually Enter API Key" : "Enter API Key"}
+                                    </Label>
+                                    <Input
+                                        placeholder="sk_live_..."
+                                        value={selectedApiKey}
+                                        onChange={(e) => setSelectedApiKey(e.target.value)}
+                                        className="border-blue-200 bg-white font-mono"
+                                    />
+                                    <p className="text-[10px] text-blue-600/70">
+                                        This key will be embedded in your script and determines which bot account to load.
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </div>
 

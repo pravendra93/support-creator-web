@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Tenant, TenantCreate, TenantUpdate } from "@/types/tenant";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 
 interface TenantFormProps {
     initialData?: Tenant;
@@ -13,6 +14,7 @@ interface TenantFormProps {
 
 export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantFormProps) {
     const router = useRouter();
+    const { user: currentUser } = useAuth();
     const [formData, setFormData] = useState<TenantCreate>({
         name: initialData?.name || "",
         domain: initialData?.domain || "",
@@ -29,6 +31,13 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
     useEffect(() => {
         fetchAccounts();
     }, []);
+
+    // Effect to pre-select current user as owner
+    useEffect(() => {
+        if (!isEditing && !formData.owner_account_id && currentUser?.id) {
+            setFormData(prev => ({ ...prev, owner_account_id: currentUser.id }));
+        }
+    }, [currentUser, isEditing, formData.owner_account_id]);
 
     const fetchAccounts = async () => {
         try {
@@ -99,11 +108,10 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
 
             <div className="space-y-2">
                 <label className="text-sm font-medium">
-                    Workspace Domain *
+                    Workspace Domain
                 </label>
                 <input
                     type="text"
-                    required
                     value={formData.domain}
                     onChange={(e) =>
                         setFormData({ ...formData, domain: e.target.value.toLowerCase().replace(/\s+/g, '-') })
