@@ -37,7 +37,7 @@ export default function PlansPage() {
 
             setPlans(data);
             setError("");
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         } finally {
             setLoading(false);
@@ -60,7 +60,7 @@ export default function PlansPage() {
 
             setShowCreateModal(false);
             fetchPlans();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         }
     };
@@ -81,7 +81,7 @@ export default function PlansPage() {
 
             setEditingPlan(null);
             fetchPlans();
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         }
     };

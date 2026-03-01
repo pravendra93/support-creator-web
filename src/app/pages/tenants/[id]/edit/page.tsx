@@ -35,7 +35,7 @@ export default function EditWorkspacePage() {
             }
             const data = await response.json();
             setTenant(data);
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         } finally {
             setLoading(false);

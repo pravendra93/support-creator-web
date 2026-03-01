@@ -199,7 +199,7 @@ export function UploadModal({
                 handleClose();
             }, 2000);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Upload error:", error);
             toast({
                 title: "Upload failed",

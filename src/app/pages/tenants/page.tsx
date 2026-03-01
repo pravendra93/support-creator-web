@@ -36,7 +36,7 @@ export default function TenantsPage() {
 
             setTenants(data);
             setError("");
-        } catch (err: any) {
+        } catch (err: unknown) {
             setError(err.message);
         } finally {
             setLoading(false);

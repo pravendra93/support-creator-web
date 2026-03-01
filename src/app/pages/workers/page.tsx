@@ -54,8 +54,8 @@ export default function WorkersPage() {
             const activeTasksCount = workersList.reduce((acc, w) => acc + w.active, 0);
 
             // Flower task objects keys: uuid, name, state, received, started, runtime, worker
-            const processedCount = tasksArray.filter((t: any) => t.state === "SUCCESS").length;
-            const failedCount = tasksArray.filter((t: any) => t.state === "FAILURE").length;
+            const processedCount = tasksArray.filter((t: unknown) => t.state === "SUCCESS").length;
+            const failedCount = tasksArray.filter((t: unknown) => t.state === "FAILURE").length;
 
             setWorkers(workersList);
             setTasks(tasksArray);

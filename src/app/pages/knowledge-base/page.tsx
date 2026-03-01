@@ -121,7 +121,7 @@ function KnowledgeBaseContent() {
             } else {
                 throw new Error("Failed to get view URL");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("View error:", error);
             toast({
                 title: "View failed",
@@ -146,7 +146,7 @@ function KnowledgeBaseContent() {
             } else {
                 throw new Error("Failed to delete file");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Delete error:", error);
             toast({
                 title: "Delete failed",
@@ -179,7 +179,7 @@ function KnowledgeBaseContent() {
                 const error = await res.json();
                 throw new Error(error.error || "Failed to trigger processing");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Process error:", error);
             toast({
                 title: "Processing failed",
@@ -210,7 +210,7 @@ function KnowledgeBaseContent() {
                 const error = await res.json();
                 throw new Error(error.error || "Failed to stop processing");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Stop error:", error);
             toast({
                 title: "Stop failed",
@@ -302,7 +302,7 @@ function KnowledgeBaseContent() {
                 description: `${file.name} has been uploaded.`,
             });
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
             toast({
                 title: "Upload failed",

@@ -29,7 +29,7 @@ export interface PlanFeatures {
         max_storage_mb?: number;
         max_chunks_total?: number;
     };
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface TenantSettings {
@@ -69,7 +69,7 @@ export interface PlanCreate {
     stripe_product_id?: string;
     stripe_price_id?: string;
     features?: PlanFeatures;
-    meta?: Record<string, any>;
+    meta?: Record<string, unknown>;
     active?: boolean;
 }
 
@@ -84,6 +84,6 @@ export interface PlanUpdate {
     stripe_product_id?: string;
     stripe_price_id?: string;
     features?: PlanFeatures;
-    meta?: Record<string, any>;
+    meta?: Record<string, unknown>;
     active?: boolean;
 }
