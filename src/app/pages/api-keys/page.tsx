@@ -18,6 +18,8 @@ import { CreateApiKeyModal } from "@/components/api-keys/create-api-key-modal";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 
+import { PageHeader } from "@/components/shared/page-header";
+
 export default function ApiKeysPage() {
     const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -61,8 +63,6 @@ export default function ApiKeysPage() {
             console.error("Failed to check tenants:", error);
         }
     };
-
-
 
     const handleDeleteClick = (apiKey: ApiKey) => {
         setKeyToDelete(apiKey);
@@ -110,19 +110,18 @@ export default function ApiKeysPage() {
                 onSuccess={fetchApiKeys}
             />
 
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Manage your API keys for programmatic access
-                    </p>
-                </div>
-                {hasTenants && (
-                    <Button onClick={() => setIsCreateModalOpen(true)} className="bg-primary hover:bg-primary/90 cursor-pointer">
-                        <Plus className="mr-2 h-4 w-4" /> Create API-Key
+            <PageHeader
+                title="API Keys"
+                description="Manage your API keys for programmatic access"
+                icon={Key}
+                gradient="from-amber-500 to-orange-600"
+                howItWorks="API Keys allow you to securely connect your external applications or websites to our AI engine. Each key is scoped to a specific Workspace. Keep your 'Full Key' secret—it grants full access to your workspace's AI capabilities. You can create multiple keys for different environments (e.g., Development vs. Production) and revoke them instantly if they are compromised."
+                actions={hasTenants && (
+                    <Button onClick={() => setIsCreateModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl px-6 py-6 font-bold shadow-lg transition-all transform active:scale-95 cursor-pointer">
+                        <Plus className="mr-2 h-5 w-5" /> Create API Key
                     </Button>
                 )}
-            </div>
+            />
 
             <div className="flex items-center gap-4">
                 <div className="relative flex-1 max-w-sm">

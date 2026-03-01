@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { PageHeader } from "@/components/shared/page-header";
+
 export default function TenantsPage() {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [loading, setLoading] = useState(true);
@@ -56,22 +58,21 @@ export default function TenantsPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Workspaces</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Manage organizations and their configurations
-                    </p>
-                </div>
-                <Link
-                    href="/pages/tenants/new"
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add Workspace
-                </Link>
-            </div>
+            <PageHeader
+                title="Workspaces"
+                description="Manage organizations and their configurations"
+                icon={Building2}
+                howItWorks="Workspaces are isolated containers for your AI agents. Each workspace can have its own domain, knowledge base, and unique configuration. Use this page to create new workspaces for different clients or projects, manage their subscription plans, and monitor their status (Active, Pending, or Suspended)."
+                actions={
+                    <Link
+                        href="/pages/tenants/new"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-[0_10px_20px_-5px_rgba(79,70,229,0.3)] font-bold text-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Add Workspace
+                    </Link>
+                }
+            />
 
             {/* Error Message */}
             {error && (

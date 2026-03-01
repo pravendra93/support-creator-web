@@ -23,6 +23,8 @@ interface Tenant {
     name: string;
 }
 
+import { PageHeader } from "@/components/shared/page-header";
+
 function KnowledgeBaseContent() {
     const [files, setFiles] = useState<KnowledgeBaseFile[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -41,20 +43,14 @@ function KnowledgeBaseContent() {
     useEffect(() => {
         const loadTenants = async () => {
             try {
-                console.log("[KB Page] User:", user);
-                console.log("[KB Page] Loading tenants...");
                 setIsLoadingTenants(true);
 
                 if (user?.role === 'super_admin' || user?.role === 'platform_user' || user?.role === 'tenant_admin') {
-                    console.log("[KB Page] User is admin, fetching all tenants");
-                    // Admin users: fetch all tenants and show dropdown
                     const res = await fetch("/api/tenants");
                     if (res.ok) {
                         const data = await res.json();
-                        console.log("[KB Page] Received tenants:", data);
                         setTenants(data);
 
-                        // Auto-select if URL has tenant or default to first
                         if (urlTenantId) {
                             setSelectedTenantId(urlTenantId);
                         } else if (data.length > 0) {
@@ -62,14 +58,11 @@ function KnowledgeBaseContent() {
                         }
                     }
                 } else {
-                    // Regular users: fetch their own tenant only
                     const res = await fetch("/api/tenants");
                     if (res.ok) {
                         const data = await res.json();
-                        // For regular users, the API should return only their tenant
-                        // but if it returns multiple, just take the first one
                         if (data.length > 0) {
-                            setTenants([data[0]]); // Only show their tenant
+                            setTenants([data[0]]);
                             setSelectedTenantId(data[0].id);
                         }
                     }
@@ -81,11 +74,8 @@ function KnowledgeBaseContent() {
             }
         };
 
-        console.log("[KB Page] useEffect triggered. User exists?", !!user);
         if (user) {
             loadTenants();
-        } else {
-            console.log("[KB Page] No user, skipping tenant load");
         }
     }, [user, urlTenantId]);
 
@@ -96,19 +86,17 @@ function KnowledgeBaseContent() {
             const res = await fetch(`/api/knowledge-base?tenant_id=${selectedTenantId}`);
             if (res.ok) {
                 const data = await res.json();
-                // Find current workspace name
                 const workspaceName = tenants.find(t => t.id === selectedTenantId)?.name || "Default";
 
-                // Map backend response to frontend interface
                 const mappedFiles: KnowledgeBaseFile[] = data.map((f: any) => ({
                     id: f.id,
                     name: f.file_name,
                     workspaceName: workspaceName,
                     type: f.file_type?.toUpperCase() || 'PDF',
                     size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
-                    status: f.status, // Use backend status directly
+                    status: f.status,
                     uploadedAt: new Date(f.created_at),
-                    storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`, // Construct URL if not provided
+                    storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`,
                     estimated_time: f.estimated_time
                 }));
                 setFiles(mappedFiles);
@@ -150,7 +138,6 @@ function KnowledgeBaseContent() {
             });
 
             if (res.ok) {
-                // Remove file from UI
                 setFiles(prev => prev.filter(f => f.id !== fileId));
                 toast({
                     title: "File deleted",
@@ -177,7 +164,6 @@ function KnowledgeBaseContent() {
 
             if (res.ok) {
                 const updatedFile = await res.json();
-                // Update file status in UI
                 setFiles(prev => prev.map(f => f.id === fileId ? {
                     ...f,
                     status: updatedFile.status === 'uploaded' ? 'in_progress' : updatedFile.status
@@ -188,7 +174,6 @@ function KnowledgeBaseContent() {
                     description: "Document is being processed in the background.",
                 });
 
-                // Refresh files after a delay to show updated status
                 setTimeout(() => fetchFiles(), 2000);
             } else {
                 const error = await res.json();
@@ -212,7 +197,6 @@ function KnowledgeBaseContent() {
 
             if (res.ok) {
                 const updatedFile = await res.json();
-                // Update file status in UI
                 setFiles(prev => prev.map(f => f.id === fileId ? {
                     ...f,
                     status: updatedFile.status
@@ -244,7 +228,6 @@ function KnowledgeBaseContent() {
         const file = e.target.files?.[0];
         if (!file || !selectedTenantId) return;
 
-        // Check extension
         const validExtensions = ['.txt', '.doc', '.docx', '.pdf', '.csv'];
         const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
 
@@ -259,10 +242,8 @@ function KnowledgeBaseContent() {
 
         setIsLoading(true);
         const tempId = Math.random().toString();
-
         const workspaceName = tenants.find(t => t.id === selectedTenantId)?.name || "Default";
 
-        // Optimistic UI
         const tempFile: KnowledgeBaseFile = {
             id: tempId,
             name: file.name,
@@ -274,7 +255,6 @@ function KnowledgeBaseContent() {
         setFiles(prev => [tempFile, ...prev]);
 
         try {
-            // 1. Get Presigned URL
             const urlRes = await fetch("/api/knowledge-base/upload-url", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -293,8 +273,6 @@ function KnowledgeBaseContent() {
             }
             const { upload_url, file_id } = await urlRes.json();
 
-            // 2. Upload to S3
-            // Note: No auth headers here, it's a presigned URL
             const uploadRes = await fetch(upload_url, {
                 method: "PUT",
                 body: file,
@@ -305,7 +283,6 @@ function KnowledgeBaseContent() {
 
             if (!uploadRes.ok) throw new Error("Failed to upload to storage");
 
-            // 3. Confirm Upload
             const confirmRes = await fetch(`/api/knowledge-base/confirm-upload/${file_id}`, {
                 method: "POST"
             });
@@ -314,7 +291,6 @@ function KnowledgeBaseContent() {
 
             const confirmedFile = await confirmRes.json();
 
-            // Update UI with real file
             setFiles(prev => prev.map(f => f.id === tempId ? {
                 ...f,
                 id: confirmedFile.id,
@@ -333,7 +309,6 @@ function KnowledgeBaseContent() {
                 description: error.message || "Something went wrong while uploading.",
                 variant: "destructive",
             });
-            // Remove temp file
             setFiles(prev => prev.filter(f => f.id !== tempId));
         } finally {
             setIsLoading(false);
@@ -360,29 +335,26 @@ function KnowledgeBaseContent() {
                 initialTenantId={selectedTenantId}
                 tenants={tenants}
             />
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Upload documents (TXT, DOC, DOCX, PDF, CSV) to train your AI agent.
-                    </p>
-                </div>
 
-                <div className="flex items-center gap-4">
-                    {tenants.length > 0 ? (
-                        <Button onClick={handleUploadClick} disabled={isLoading} className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700 h-11 px-8 rounded-xl font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-blue-900/20 border border-blue-500/50">
-                            <CloudUpload className="mr-2 h-5 w-5" />
-                            {isLoading ? "Uploading..." : "Upload Document"}
-                        </Button>
-                    ) : (
-                        !isLoadingTenants && (
-                            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-                                <span>Create workspace first then you can upload docs</span>
-                            </div>
-                        )
-                    )}
-                </div>
-            </div>
+            <PageHeader
+                title="Knowledge Base"
+                description="Upload documents to train your AI agent"
+                icon={CloudUpload}
+                gradient="from-blue-500 to-indigo-600"
+                howItWorks="The Knowledge Base is the brain of your AI agent. When you upload a document, our system parses its content and breaks it down into 'chunks' that the AI can understand. You must explicitly 'Process' a document after uploading it to make it available for the AI. Supported formats: TXT, DOC, DOCX, PDF, and CSV. Each workspace has its own isolated knowledge base."
+                actions={tenants.length > 0 ? (
+                    <Button onClick={handleUploadClick} disabled={isLoading} className="cursor-pointer gap-2 bg-indigo-600 hover:bg-indigo-700 h-12 px-8 rounded-2xl font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-xl border border-white/10 text-white">
+                        <CloudUpload className="mr-2 h-5 w-5" />
+                        {isLoading ? "Uploading..." : "Upload Document"}
+                    </Button>
+                ) : (
+                    !isLoadingTenants && (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold animate-pulse">
+                            Create workspace first to upload docs
+                        </div>
+                    )
+                )}
+            />
 
             {tenants.length === 0 && !isLoadingTenants ? (
                 <div className="mt-8">

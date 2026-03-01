@@ -62,6 +62,9 @@ const renderLogs = (rawLogs: string) => {
     );
 };
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Terminal } from "lucide-react";
+
 export default function LogsPage() {
     const [logs, setLogs] = useState<LogsData>({ app_logs: "", error_logs: "", nginx_access: "", nginx_error: "", gunicorn: "" });
     const [loading, setLoading] = useState(true);
@@ -111,26 +114,25 @@ export default function LogsPage() {
 
     return (
         <div className="container py-6 animate-in fade-in duration-500">
-            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                        System Logs
-                    </h1>
-                    <p className="text-muted-foreground mt-2">
-                        View and analyze system application logs.
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading}>
-                        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                        Refresh
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={handleDownload} disabled={loading || !logs[activeTab as keyof LogsData]}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                    </Button>
-                </div>
-            </div>
+            <PageHeader
+                title="System Logs"
+                description="View and analyze system application logs."
+                icon={Terminal}
+                gradient="from-slate-700 to-slate-900"
+                howItWorks="System logs capture every event occurring in the backend, from API requests to internal errors. Use the 'App Logs' for application-level logic, 'Errors' for specific failures, and 'Nginx' for networking/traffic signals. These logs are essential for debugging unexpected bot behavior or performance issues. You can refresh live or download a local copy for deeper analysis."
+                actions={
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading} className="rounded-xl border-white/5 bg-[#13171F] font-bold h-10 px-4">
+                            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                            Refresh
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={handleDownload} disabled={loading || !logs[activeTab as keyof LogsData]} className="rounded-xl font-bold h-10 px-4 bg-indigo-600 text-white hover:bg-indigo-700">
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
+                        </Button>
+                    </div>
+                }
+            />
 
             {error && (
                 <div className="mb-6 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">

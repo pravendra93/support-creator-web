@@ -6,8 +6,12 @@ import {
     Plus,
     Loader2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PlanCard } from "./components/plan-card";
 import { PlanModal } from "./components/plan-modal";
+
+import { PageHeader } from "@/components/shared/page-header";
+import { CreditCard } from "lucide-react";
 
 export default function PlansPage() {
     const [plans, setPlans] = useState<Plan[]>([]);
@@ -98,21 +102,35 @@ export default function PlansPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Plans</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Manage subscription plans and pricing
-                    </p>
+            <PageHeader
+                title="Subscription Plans"
+                description="Manage subscription tiers, limits, and pricing."
+                icon={CreditCard}
+                gradient="from-amber-500 to-orange-600"
+                howItWorks="Subscription plans define the capabilities and limits for each workspace level. You can create tiers like 'Starter', 'Pro', or 'Enterprise', each with varying token limits, document caps, and support features. These plans are synchronized with your billing provider (e.g., Stripe) to ensure seamless payment processing."
+                actions={
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all font-bold shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Create Tier
+                    </button>
+                }
+            />
+
+            <div className="flex items-center justify-between bg-[#13171F]/50 p-4 rounded-2xl border border-white/5 backdrop-blur-sm -mt-2">
+                <div className="flex items-center gap-3 group cursor-pointer" onClick={() => setOnlyActive(!onlyActive)}>
+                    <div className={cn(
+                        "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+                        onlyActive ? "bg-indigo-600 border-indigo-500" : "border-slate-800 bg-black/20"
+                    )}>
+                        {onlyActive && <div className="w-2.5 h-2.5 bg-white rounded-full animate-in zoom-in-50 duration-300" />}
+                    </div>
+                    <span className="text-sm font-bold text-slate-400 group-hover:text-slate-200 transition-colors">
+                        Show only active plans
+                    </span>
                 </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
-                >
-                    <Plus className="h-4 w-4" />
-                    Create Plan
-                </button>
             </div>
 
             {/* Filter */}

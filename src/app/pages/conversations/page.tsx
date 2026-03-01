@@ -43,6 +43,8 @@ interface Message {
     created_at: string;
 }
 
+import { PageHeader } from "@/components/shared/page-header";
+
 function ConversationsContent() {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -65,7 +67,6 @@ function ConversationsContent() {
                     const data = await res.json();
                     setTenants(data);
 
-                    // Respect URL tenantId or default to first
                     if (urlTenantId) {
                         setSelectedTenantId(urlTenantId);
                     } else if (data.length > 0 && !selectedTenantId) {
@@ -126,27 +127,25 @@ function ConversationsContent() {
 
     return (
         <div className="flex flex-col gap-6 p-6 h-[calc(100vh-64px)]">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Conversations</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Monitor AI chat history and customer interactions.
-                    </p>
-                </div>
-
-                {tenants.length > 0 && (
+            <PageHeader
+                title="Conversations"
+                description="Monitor AI chat history and customer interactions."
+                icon={MessageSquare}
+                gradient="from-emerald-500 to-teal-600"
+                howItWorks="This page provides a real-time log of all interactions between your AI agent and your customers. You can select a workspace to view its specific history, browse through individual 'Sessions', and see the exact messages exchanged. Use this to audit your bot's behavior, identify common customer questions, and ensure your knowledge base is providing accurate answers."
+                actions={tenants.length > 0 && (
                     <Select value={selectedTenantId || ""} onValueChange={setSelectedTenantId}>
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-[200px] bg-[#13171F] border-white/5 rounded-xl h-12 font-bold shadow-lg">
                             <SelectValue placeholder="Select Workspace" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-[#13171F] border-white/5 text-white">
                             {tenants.map((t) => (
-                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                <SelectItem key={t.id} value={t.id} className="cursor-pointer hover:bg-white/5">{t.name}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 )}
-            </div>
+            />
 
             {!selectedTenantId ? (
                 <NoWorkspaceState message="Select a workspace to view conversations." />

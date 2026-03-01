@@ -9,6 +9,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { PageHeader } from "@/components/shared/page-header";
+import { Settings } from "lucide-react";
+
 export default function EditWorkspacePage() {
     const params = useParams();
     const router = useRouter();
@@ -55,7 +58,7 @@ export default function EditWorkspacePage() {
     if (loading) {
         return (
             <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
             </div>
         );
     }
@@ -79,25 +82,27 @@ export default function EditWorkspacePage() {
 
     return (
         <div className="flex flex-col gap-6 max-w-4xl mx-auto py-8">
-            <div className="flex items-center gap-4">
-                <Link
-                    href="/pages/tenants"
-                    className="p-2 hover:bg-muted rounded-full transition-colors"
-                >
-                    <ChevronLeft className="h-5 w-5" />
-                </Link>
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Edit Workspace</h1>
-                    <p className="text-muted-foreground">
-                        Manage workspace settings and configuration
-                    </p>
-                </div>
-            </div>
+            <PageHeader
+                title={`Edit: ${tenant.name}`}
+                description="Manage workspace settings and configuration."
+                icon={Settings}
+                gradient="from-slate-600 to-slate-800"
+                howItWorks="Update your organization's core details here. In 'Settings', you can modify the display name or status. In 'Chatbot', you can fine-tune the AI's specific instructions for this workspace. Remember that changes to the domain name might affect your existing widget embeds."
+                actions={
+                    <Link
+                        href="/pages/tenants"
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-white/5 rounded-xl transition-colors text-slate-400 hover:text-white"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                        Back to Workspaces
+                    </Link>
+                }
+            />
 
             <Tabs defaultValue="settings" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
-                    <TabsTrigger value="settings">Settings</TabsTrigger>
-                    <TabsTrigger value="chatbot">Chatbot</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 lg:w-[400px] bg-[#13171F] border border-white/5 p-1 rounded-2xl h-12">
+                    <TabsTrigger value="settings" className="rounded-xl data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold transition-all">Settings</TabsTrigger>
+                    <TabsTrigger value="chatbot" className="rounded-xl data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold transition-all">Chatbot</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="settings" className="mt-6">
