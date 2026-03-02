@@ -260,7 +260,7 @@ export default function DashboardPage() {
     );
 }
 
-function MetricCard({ title, value, change, icon: Icon, gradient }: { title: string, value: string, change: string, icon: unknown, gradient: string }) {
+function MetricCard({ title, value, change, icon: Icon, gradient }: { title: string, value: string, change: string, icon: React.ElementType, gradient: string }) {
     return (
         <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl hover:bg-slate-900/60 transition-colors group relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-500"

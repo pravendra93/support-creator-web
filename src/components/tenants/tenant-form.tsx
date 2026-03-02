@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/utils";
 
 import React, { useState, useEffect } from "react";
 import { Tenant, TenantCreate, TenantUpdate } from "@/types/tenant";
@@ -69,13 +70,13 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
             await onSubmit(submitData);
             router.push("/pages/tenants");
         } catch (err: unknown) {
-            setError(err.message || "An error occurred");
+            setError(getErrorMessage(err) || "An error occurred");
         } finally {
             setSubmitting(false);
         }
     };
 
-    const getAccountDisplayName = (account: unknown) => {
+    const getAccountDisplayName = (account: any) => {
         if (account.first_name || account.last_name) {
             return `${account.first_name || ""} ${account.last_name || ""}`.trim();
         }

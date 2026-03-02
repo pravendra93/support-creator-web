@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/utils";
 
 import React, { useState, useRef, useCallback } from "react";
 import { CloudUpload, FileText, X, Loader2, CheckCircle, File, Building2 } from "lucide-react";
@@ -203,7 +204,7 @@ export function UploadModal({
             console.error("Upload error:", error);
             toast({
                 title: "Upload failed",
-                description: error.message || "Something went wrong while uploading.",
+                description: getErrorMessage(error) || "Something went wrong while uploading.",
                 variant: "destructive",
             });
         } finally {

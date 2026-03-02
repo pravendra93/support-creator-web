@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { Settings } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function EditWorkspacePage() {
     const params = useParams();
@@ -36,7 +37,7 @@ export default function EditWorkspacePage() {
             const data = await response.json();
             setTenant(data);
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

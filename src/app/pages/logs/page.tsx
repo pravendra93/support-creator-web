@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Loader2, RefreshCw, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getErrorMessage } from "@/lib/utils";
 
 type LogsData = {
     app_logs: string;
@@ -89,7 +90,7 @@ export default function LogsPage() {
                 gunicorn: data.gunicorn || "",
             });
         } catch (err: unknown) {
-            setError(err.message || "An unexpected error occurred.");
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

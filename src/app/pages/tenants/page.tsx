@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function TenantsPage() {
     const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -37,7 +38,7 @@ export default function TenantsPage() {
             setTenants(data);
             setError("");
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

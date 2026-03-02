@@ -13,6 +13,7 @@ import {
     Shield,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function TenantUsersPage() {
     const params = useParams();
@@ -44,7 +45,7 @@ export default function TenantUsersPage() {
             setUsers(data);
             setError("");
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -69,7 +70,7 @@ export default function TenantUsersPage() {
             setTimeout(() => setSuccess(""), 5000);
             fetchUsers();
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         }
     };
 

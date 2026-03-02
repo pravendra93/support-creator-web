@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getErrorMessage } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
     } catch (error: unknown) {
         console.error("Razorpay create order error:", error);
         return NextResponse.json(
-            { message: error?.message || "Failed to create payment order" },
+            { message: getErrorMessage(error) || "Failed to create payment order" },
             { status: 500 }
         );
     }

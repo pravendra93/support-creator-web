@@ -17,6 +17,7 @@ import {
 import { RazorpayPaymentModal } from "@/components/modals/razorpay-payment-modal";
 import { useAuth } from "@/context/auth-context";
 import { useGeoDetect, formatCurrency } from "@/lib/use-geo-detect";
+import { getErrorMessage } from "@/lib/utils";
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
@@ -61,7 +62,7 @@ export default function BillingPage() {
             // Only show active plans to customers
             setPlans((data as Plan[]).filter((p) => p.active));
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }
