@@ -6,7 +6,7 @@ import {
     Plus,
     Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 import { PlanCard } from "./components/plan-card";
 import { PlanModal } from "./components/plan-modal";
 
@@ -38,7 +38,7 @@ export default function PlansPage() {
             setPlans(data);
             setError("");
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -61,7 +61,7 @@ export default function PlansPage() {
             setShowCreateModal(false);
             fetchPlans();
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         }
     };
 
@@ -82,7 +82,7 @@ export default function PlansPage() {
             setEditingPlan(null);
             fetchPlans();
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         }
     };
 

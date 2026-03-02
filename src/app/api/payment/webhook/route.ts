@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { BACKEND_URL } from "@/lib/config";
+import { getErrorMessage } from "@/lib/utils";
 
 // Configuration constants
 const MAX_BODY_SIZE = 1 * 1024 * 1024; // 1 MiB
@@ -109,10 +110,11 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true });
     } catch (error: unknown) {
+        const errorMessage = getErrorMessage(error);
         console.error(
-            JSON.stringify({ requestId, level: "error", message: error.message || "Unexpected error" })
+            JSON.stringify({ requestId, level: "error", message: errorMessage || "Unexpected error" })
         );
-        const status = error.message === "Payload too large" ? 413 : 500;
-        return NextResponse.json({ message: error.message || "Internal server error" }, { status });
+        const status = errorMessage === "Payload too large" ? 413 : 500;
+        return NextResponse.json({ message: errorMessage || "Internal server error" }, { status });
     }
 }

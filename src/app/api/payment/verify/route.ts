@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { BACKEND_URL } from "@/lib/config";
+import { getErrorMessage } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
     } catch (error: unknown) {
         console.error("Payment verification error:", error);
         return NextResponse.json(
-            { message: error?.message || "Payment verification failed" },
+            { message: getErrorMessage(error) || "Payment verification failed" },
             { status: 500 }
         );
     }

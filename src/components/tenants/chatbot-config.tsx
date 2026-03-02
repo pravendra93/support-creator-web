@@ -1,4 +1,5 @@
 "use client"
+import { getErrorMessage } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -101,7 +102,7 @@ export function ChatbotConfig({ tenantId }: { tenantId: string }) {
             setMessage({ type: 'success', text: "Changes saved successfully!" })
             setTimeout(() => setMessage(null), 3000)
         } catch (error: unknown) {
-            setMessage({ type: 'error', text: error.message || "Something went wrong" })
+            setMessage({ type: 'error', text: getErrorMessage(error) || "Something went wrong" })
         } finally {
             setSaving(false)
         }

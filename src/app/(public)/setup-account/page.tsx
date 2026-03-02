@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, CheckCircle, AlertCircle, User, Lock } from "lucide-react";
+import { getErrorMessage } from "@/lib/utils";
 
 export default function SetupAccountPage() {
     const searchParams = useSearchParams();
@@ -102,7 +103,7 @@ export default function SetupAccountPage() {
                 router.push("/login?setup=success");
             }, 2000);
         } catch (err: unknown) {
-            setError(err.message);
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

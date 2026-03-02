@@ -24,6 +24,7 @@ interface Tenant {
 }
 
 import { PageHeader } from "@/components/shared/page-header";
+import { getErrorMessage } from "@/lib/utils";
 
 function KnowledgeBaseContent() {
     const [files, setFiles] = useState<KnowledgeBaseFile[]>([]);
@@ -125,7 +126,7 @@ function KnowledgeBaseContent() {
             console.error("View error:", error);
             toast({
                 title: "View failed",
-                description: error.message || "Failed to open document.",
+                description: getErrorMessage(error) || "Failed to open document.",
                 variant: "destructive",
             });
         }
@@ -150,7 +151,7 @@ function KnowledgeBaseContent() {
             console.error("Delete error:", error);
             toast({
                 title: "Delete failed",
-                description: error.message || "Failed to delete document.",
+                description: getErrorMessage(error) || "Failed to delete document.",
                 variant: "destructive",
             });
         }
@@ -183,7 +184,7 @@ function KnowledgeBaseContent() {
             console.error("Process error:", error);
             toast({
                 title: "Processing failed",
-                description: error.message || "Failed to trigger document processing.",
+                description: getErrorMessage(error) || "Failed to trigger document processing.",
                 variant: "destructive",
             });
         }
@@ -214,7 +215,7 @@ function KnowledgeBaseContent() {
             console.error("Stop error:", error);
             toast({
                 title: "Stop failed",
-                description: error.message || "Failed to stop document processing.",
+                description: getErrorMessage(error) || "Failed to stop document processing.",
                 variant: "destructive",
             });
         }
@@ -306,7 +307,7 @@ function KnowledgeBaseContent() {
             console.error(error);
             toast({
                 title: "Upload failed",
-                description: error.message || "Something went wrong while uploading.",
+                description: getErrorMessage(error) || "Something went wrong while uploading.",
                 variant: "destructive",
             });
             setFiles(prev => prev.filter(f => f.id !== tempId));

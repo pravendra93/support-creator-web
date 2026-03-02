@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/utils";
 
 import React, { useEffect, useRef, useState } from "react";
 import { Plan } from "@/types/plan";
@@ -26,8 +27,7 @@ interface RazorpayPaymentModalProps {
 
 declare global {
     interface Window {
-         
-        Razorpay: unknown;
+        Razorpay: any;
     }
 }
 
@@ -132,7 +132,7 @@ export function RazorpayPaymentModal({
                             onSuccess(response.razorpay_payment_id);
                             resolve();
                         } catch (err: unknown) {
-                            reject(err);
+                            reject(new Error(getErrorMessage(err)));
                         }
                     },
                     modal: {
