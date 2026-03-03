@@ -60,7 +60,14 @@ export default function BillingPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Failed to fetch plans");
             // Only show active plans to customers
-            setPlans((data as Plan[]).filter((p) => p.active));
+            const publicPlans = (data as Plan[]).filter((p) => p.active);
+            setPlans(publicPlans);
+
+            // If user has a plan_slug, try to find the active plan ID
+            if (user?.plan_slug) {
+                const active = publicPlans.find(p => p.slug === user.plan_slug);
+                if (active) setActivePlanId(active.id);
+            }
         } catch (err: unknown) {
             setError(getErrorMessage(err));
         } finally {
@@ -357,9 +364,13 @@ export default function BillingPage() {
                                             <>
                                                 <CheckCircle2 className="h-4 w-4" /> Current Plan
                                             </>
+                                        ) : user?.is_subscribed ? (
+                                            <>
+                                                Upgrade Plan <ArrowRight className="h-4 w-4" />
+                                            </>
                                         ) : (
                                             <>
-                                                Get Started <ArrowRight className="h-4 w-4" />
+                                                Get This Plan <ArrowRight className="h-4 w-4" />
                                             </>
                                         )}
                                     </button>
