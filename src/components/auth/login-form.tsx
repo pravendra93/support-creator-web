@@ -60,7 +60,32 @@ export function LoginForm() {
 
             if (response.ok) {
                 await checkAuth(); // Update auth context
-                router.push("/dashboard");
+
+                // Fetch latest user info to decide redirection
+                const meRes = await fetch("/api/auth/me");
+                if (!meRes.ok) {
+                    router.push("/pages/dashboard");
+                    return;
+                }
+                const userData = await meRes.json();
+
+                // 1. Super Admin goes straight to dashboard
+                if (userData.role === 'super_admin') {
+                    router.push("/pages/dashboard");
+                    return;
+                }
+
+                // 2. Check for tenant and subscription status from userData
+                if (!userData.tenant_id) {
+                    // No workspace - guide to create one
+                    router.push("/pages/tenants/new");
+                } else if (!userData.is_subscribed) {
+                    // Has workspace but no active subscription - guide to purchase/billing
+                    router.push("/pages/billing");
+                } else {
+                    // All setup - go to dashboard
+                    router.push("/pages/dashboard");
+                }
             } else {
                 const data = await response.json();
                 setError(data.message || "Login failed");
