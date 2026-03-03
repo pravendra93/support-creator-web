@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap } from "lucide-react";
+import { trackSignupClick, trackCtaClicked } from "@/lib/ga";
 
 export default function CTASection() {
     return (
@@ -34,6 +37,7 @@ export default function CTASection() {
                             <Button
                                 size="lg"
                                 className="h-14 px-10 text-base rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/25 transition-all duration-300 hover:shadow-purple-500/40 hover:scale-[1.02] cursor-pointer"
+                                onClick={() => trackSignupClick()}
                             >
                                 Start Free Trial
                                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -44,6 +48,7 @@ export default function CTASection() {
                                 variant="outline"
                                 size="lg"
                                 className="h-14 px-10 text-base rounded-xl border-white/10 hover:bg-white/5 transition-all duration-300 cursor-pointer"
+                                onClick={() => trackCtaClicked("CTA Section: See How It Works")}
                             >
                                 See How It Works
                             </Button>

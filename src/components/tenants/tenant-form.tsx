@@ -21,7 +21,7 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
         domain: initialData?.domain || "",
         owner_account_id: initialData?.owner_account_id || "",
         status: initialData?.status || "pending",
-        plan: initialData?.plan || "trial",
+        plan: initialData?.plan || "none",
     });
 
     const [accounts, setAccounts] = useState<any[]>([]);
@@ -68,7 +68,11 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
 
         try {
             await onSubmit(submitData);
-            router.push("/pages/tenants");
+            if (isEditing) {
+                router.push("/pages/tenants");
+            } else {
+                router.push("/pages/billing");
+            }
         } catch (err: unknown) {
             setError(getErrorMessage(err) || "An error occurred");
         } finally {

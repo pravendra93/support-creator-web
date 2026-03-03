@@ -60,8 +60,15 @@ export default function BillingPage() {
             const res = await fetch("/api/plans/public");
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Failed to fetch plans");
-            // Only show active plans
-            setPlans((data as Plan[]).filter((p) => p.active));
+            // Only show active plans to customers
+            const publicPlans = (data as Plan[]).filter((p) => p.active);
+            setPlans(publicPlans);
+
+            // If user has a plan_slug, try to find the active plan ID
+            if (user?.plan_slug) {
+                const active = publicPlans.find(p => p.slug === user.plan_slug);
+                if (active) setActivePlanId(active.id);
+            }
         } catch (err: unknown) {
             setError(getErrorMessage(err));
         } finally {
@@ -309,8 +316,13 @@ export default function BillingPage() {
                                             }`}
                                     >
                                         <span className="relative z-10 flex items-center justify-center gap-2">
-                                            {isActive ? 'Current Plan' : 'Select Plan'}
-                                            {!isActive && <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />}
+                                            {isActive ? (
+                                                <><CheckCircle2 className="h-4 w-4" /> Current Plan</>
+                                            ) : user?.is_subscribed ? (
+                                                <>Upgrade Plan <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
+                                            ) : (
+                                                <>Get This Plan <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
+                                            )}
                                         </span>
                                         {!isActive && (
                                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />

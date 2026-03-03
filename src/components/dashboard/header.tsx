@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { sidebarLinks } from "./sidebar";
 import { useAuth } from "@/context/auth-context";
+import { trackCtaClicked } from "@/lib/ga";
 
 
 export function Header() {
@@ -78,8 +79,8 @@ export function Header() {
             </div>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="icon" className="rounded-full">
-                        <Avatar className="h-8 w-8">
+                    <Button variant="secondary" size="icon" className="rounded-full cursor-pointer">
+                        <Avatar className="h-8 w-8 cursor-pointer">
                             <AvatarImage src="" />
                             <AvatarFallback>{getInitials()}</AvatarFallback>
                         </Avatar>
@@ -89,14 +90,17 @@ export function Header() {
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild onClick={() => trackCtaClicked("Dashboard: Profile")}>
                         <Link href="/pages/me" className="cursor-pointer">Profile</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild onClick={() => trackCtaClicked("Dashboard: Settings")}>
                         <Link href="/pages/settings" className="cursor-pointer">Settings</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                        trackCtaClicked("Dashboard: Logout");
+                        logout();
+                    }}>Logout</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         </header>
