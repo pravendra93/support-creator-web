@@ -78,8 +78,8 @@ export function Header() {
             </div>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="icon" className="rounded-full">
-                        <Avatar className="h-8 w-8">
+                    <Button variant="secondary" size="icon" className="rounded-full cursor-pointer">
+                        <Avatar className="h-8 w-8 cursor-pointer">
                             <AvatarImage src="" />
                             <AvatarFallback>{getInitials()}</AvatarFallback>
                         </Avatar>
@@ -96,7 +96,7 @@ export function Header() {
                         <Link href="/pages/settings" className="cursor-pointer">Settings</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+                    <DropdownMenuItem onClick={logout} className="cursor-pointer">Logout</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         </header>
