@@ -47,6 +47,7 @@ export default function BillingPage() {
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
     const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
     const [activePlanId, setActivePlanId] = useState<string | null>(null);
+    const [billingCycle, setBillingCycle] = useState<"month" | "year">("month");
 
     useEffect(() => {
         fetchPlans();
@@ -59,7 +60,7 @@ export default function BillingPage() {
             const res = await fetch("/api/plans/public");
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Failed to fetch plans");
-            // Only show active plans to customers
+            // Only show active plans
             setPlans((data as Plan[]).filter((p) => p.active));
         } catch (err: unknown) {
             setError(getErrorMessage(err));
@@ -68,6 +69,31 @@ export default function BillingPage() {
         }
     };
 
+    // Filter plans: Trial + 2 more based on billing cycle
+    const filteredPlans = React.useMemo(() => {
+        // 1. Separate Trial/Free plans (they might not have an interval or it's monthly)
+        const trialPlans = plans.filter(p =>
+            p.slug.toLowerCase().includes('trial') ||
+            p.slug.toLowerCase().includes('free') ||
+            p.price_cents === 0
+        );
+
+        // 2. Get paid plans for current cycle
+        const cyclePlans = plans.filter(p =>
+            p.interval === billingCycle &&
+            p.price_cents > 0 &&
+            !p.slug.toLowerCase().includes('trial') &&
+            !p.slug.toLowerCase().includes('free')
+        );
+
+        // 3. Combine: 1 Trial + 2 Cycle plans
+        const result = [];
+        if (trialPlans.length > 0) result.push(trialPlans[0]);
+        result.push(...cyclePlans.slice(0, 2));
+
+        return result;
+    }, [plans, billingCycle]);
+
     const handlePaymentSuccess = (paymentId: string) => {
         setPaymentSuccess(paymentId);
         setActivePlanId(selectedPlan?.id ?? null);
@@ -75,298 +101,233 @@ export default function BillingPage() {
     };
 
     return (
-        <div className="flex flex-col gap-8 min-h-[80vh]">
+        <div className="flex flex-col gap-10 min-h-[80vh] pb-20">
             {/* ── Page header ─────────────────────────────────────────────── */}
-            <div className="relative overflow-hidden rounded-2xl p-8"
+            <div className="relative overflow-hidden rounded-3xl p-10"
                 style={{
-                    background: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)",
+                    background: "linear-gradient(135deg, #0a0a12 0%, #111122 50%, #0a0a12 100%)",
                     border: "1px solid rgba(99,102,241,0.2)",
-                    boxShadow: "0 4px 40px rgba(99,102,241,0.08)",
+                    boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
                 }}
             >
-                {/* Background decoration */}
+                {/* Animated Background Elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full"
-                        style={{ background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)" }} />
-                    <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full"
-                        style={{ background: "radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%)" }} />
+                    <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full blur-[100px] opacity-20"
+                        style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)" }} />
+                    <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full blur-[100px] opacity-10"
+                        style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }} />
                 </div>
 
-                <div className="relative">
-                    <div className="flex items-center gap-2 mb-3">
+                <div className="relative z-10 flex flex-col items-center text-center">
+                    <div className="inline-flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
                         <Sparkles className="h-4 w-4 text-indigo-400" />
-                        <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-                            Subscription Plans
+                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em]">
+                            Premium Subscriptions
                         </span>
                     </div>
-                    <h1 className="text-3xl font-extrabold text-white mb-2">
-                        Choose Your Perfect Plan
+                    <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
+                        Ready to <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Scale</span> Your Support?
                     </h1>
-                    <p className="text-gray-400 text-base max-w-lg">
-                        Unlock the full power of Assistra. Secure payments powered by Razorpay.
-                        Cancel anytime, no questions asked.
+                    <p className="text-gray-400 text-lg max-w-2xl mb-8 leading-relaxed">
+                        Choose the plan that fits your needs. All plans include our core AI engine features.
+                        No hidden fees, cancel anytime.
                     </p>
 
+                    {/* ── Billing Toggle ──────────────────────────────────────── */}
+                    <div className="flex items-center gap-4 bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-xl">
+                        <button
+                            onClick={() => setBillingCycle("month")}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${billingCycle === "month"
+                                ? "bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]"
+                                : "text-gray-400 hover:text-white"
+                                }`}
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            onClick={() => setBillingCycle("year")}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 relative ${billingCycle === "year"
+                                ? "bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]"
+                                : "text-gray-400 hover:text-white"
+                                }`}
+                        >
+                            Yearly
+                            <span className="absolute -top-3 -right-2 bg-emerald-500 text-[9px] text-white px-2 py-0.5 rounded-full font-black animate-bounce">
+                                SAVE 20%
+                            </span>
+                        </button>
+                    </div>
+
                     {/* Trust badges */}
-                    <div className="flex flex-wrap gap-4 mt-5">
+                    <div className="flex flex-wrap justify-center gap-6 mt-10">
                         {[
-                            { icon: Shield, label: "256-bit SSL Encryption" },
+                            { icon: Shield, label: "Secure SSL" },
                             { icon: RefreshCw, label: "Cancel Anytime" },
-                            { icon: CheckCircle2, label: "Instant Activation" },
+                            { icon: CheckCircle2, label: "Instant Setup" },
                         ].map(({ icon: Icon, label }) => (
-                            <div key={label} className="flex items-center gap-1.5 text-xs text-gray-400">
-                                <Icon className="h-3.5 w-3.5 text-indigo-400" />
+                            <div key={label} className="flex items-center gap-2 text-xs font-medium text-gray-500">
+                                <Icon className="h-4 w-4 text-indigo-400/60" />
                                 <span>{label}</span>
                             </div>
                         ))}
                     </div>
-
-                    {/* Geo-detected currency badge */}
-                    {!geo.loading && (
-                        <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-                            style={{
-                                background: geo.isIndia
-                                    ? "rgba(99,102,241,0.12)"
-                                    : "rgba(255,255,255,0.05)",
-                                border: geo.isIndia
-                                    ? "1px solid rgba(99,102,241,0.3)"
-                                    : "1px solid rgba(255,255,255,0.08)",
-                                color: geo.isIndia ? "#a5b4fc" : "#9ca3af",
-                            }}
-                        >
-                            <MapPin className="h-3 w-3" />
-                            {geo.isIndia
-                                ? "🇮🇳 Prices shown in ₹ INR · UPI, Cards & more available"
-                                : "🌍 Prices shown in USD"}
-                        </div>
-                    )}
                 </div>
             </div>
 
-            {/* ── Success banner ──────────────────────────────────────────── */}
-            {paymentSuccess && (
-                <div
-                    className="flex items-center gap-4 p-5 rounded-2xl"
-                    style={{
-                        background: "linear-gradient(135deg, rgba(34,197,94,0.1), rgba(16,185,129,0.06))",
-                        border: "1px solid rgba(34,197,94,0.25)",
-                    }}
-                >
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ background: "rgba(34,197,94,0.15)" }}>
-                        <CheckCircle2 className="h-5 w-5 text-green-400" />
+            {/* ── Success/Error Banners ───────────────────────────────────── */}
+            <div className="max-w-4xl mx-auto w-full px-4">
+                {paymentSuccess && (
+                    <div className="flex items-center gap-4 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-6 animate-in fade-in slide-in-from-top-4">
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+                        </div>
+                        <div>
+                            <p className="text-emerald-400 font-bold">Plan Activated Successfully! 🎉</p>
+                            <p className="text-emerald-400/60 text-sm">Welcome aboard. Your subscription is now active.</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-green-300 font-semibold">Payment Successful! 🎉</p>
-                        <p className="text-green-400/70 text-sm">
-                            Your plan has been activated. Payment ID:{" "}
-                            <span className="font-mono text-xs">{paymentSuccess}</span>
-                        </p>
-                    </div>
-                </div>
-            )}
+                )}
 
-            {/* ── Error ───────────────────────────────────────────────────── */}
-            {error && (
-                <div className="p-4 rounded-xl text-red-300 text-sm"
-                    style={{
-                        background: "rgba(239,68,68,0.08)",
-                        border: "1px solid rgba(239,68,68,0.2)",
-                    }}>
-                    {error}
-                    <button onClick={fetchPlans} className="ml-3 underline text-red-400 cursor-pointer">
-                        Retry
-                    </button>
-                </div>
-            )}
-
-            {/* ── loading ─────────────────────────────────────────────────── */}
-            {loading && (
-                <div className="flex items-center justify-center py-20">
-                    <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="h-10 w-10 animate-spin text-indigo-400" />
-                        <p className="text-gray-500 text-sm">Loading plans…</p>
+                {error && (
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-6">
+                        <p className="text-red-400 text-sm font-medium">{error}</p>
+                        <button onClick={fetchPlans} className="text-xs font-bold text-red-400 hover:underline px-3 py-1 bg-red-500/10 rounded-lg">
+                            Retry
+                        </button>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* ── Plans grid ──────────────────────────────────────────────── */}
-            {!loading && plans.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {plans.map((plan, i) => {
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-4">
+                    <div className="relative">
+                        <div className="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+                        <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-indigo-400 animate-pulse" />
+                    </div>
+                    <p className="text-gray-500 font-medium animate-pulse">Curating your experience...</p>
+                </div>
+            ) : filteredPlans.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto w-full px-6">
+                    {filteredPlans.map((plan, i) => {
                         const meta = getPlanMeta(i);
                         const Icon = meta.icon;
                         const isActive = plan.id === activePlanId;
-                        const isPopular = meta.badge === "Popular";
+                        const isMain = i === 1; // Middle card
 
                         return (
                             <div
                                 key={plan.id}
-                                id={`plan-card-${plan.id}`}
-                                className="relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
+                                className={`group relative flex flex-col rounded-[2.5rem] p-8 transition-all duration-500 ${isMain ? 'ring-2 ring-indigo-500/50 shadow-[0_0_50px_rgba(99,102,241,0.2)]' : 'hover:scale-[1.02]'
+                                    }`}
                                 style={{
-                                    background: "linear-gradient(145deg, #0f0f1a 0%, #1a1a2e 100%)",
-                                    border: isActive
-                                        ? `1px solid ${meta.color}`
-                                        : `1px solid rgba(255,255,255,0.07)`,
-                                    boxShadow: isActive
-                                        ? `0 0 30px ${meta.glow}, 0 4px 20px rgba(0,0,0,0.4)`
-                                        : "0 4px 20px rgba(0,0,0,0.3)",
-                                    transform: isPopular ? "scale(1.02)" : "scale(1)",
+                                    background: isMain
+                                        ? "linear-gradient(145deg, #111122 0%, #1a1a35 100%)"
+                                        : "linear-gradient(145deg, #0a0a12 0%, #111122 100%)",
+                                    border: isMain ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.05)",
                                 }}
                             >
-                                {/* Top glow line */}
-                                <div className="absolute top-0 left-0 right-0 h-px"
-                                    style={{ background: `linear-gradient(90deg, transparent, ${meta.color}, transparent)` }} />
+                                {/* Glow Effect on Hover */}
+                                <div className="absolute inset-0 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                                    style={{ boxShadow: `inset 0 0 40px ${meta.color}15` }} />
 
-                                {/* Badge */}
-                                {meta.badge && (
-                                    <div className="absolute top-4 right-4">
-                                        <span
-                                            className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                                            style={{
-                                                background: `linear-gradient(135deg, ${meta.color}33, ${meta.color}22)`,
-                                                border: `1px solid ${meta.color}55`,
-                                                color: meta.color,
-                                            }}
-                                        >
-                                            {meta.badge}
-                                        </span>
+                                {isMain && (
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg z-20">
+                                        Most Popular
                                     </div>
                                 )}
 
-                                {isActive && (
-                                    <div className="absolute top-4 left-4">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                                            style={{
-                                                background: "rgba(34,197,94,0.15)",
-                                                border: "1px solid rgba(34,197,94,0.3)",
-                                                color: "#4ade80",
-                                            }}>
-                                            ✓ Active
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Card content */}
-                                <div className="flex-1 p-6 pt-8">
-                                    {/* Icon + Name */}
-                                    <div className="flex items-center gap-3 mb-4">
+                                <div className="relative z-10 flex flex-col h-full">
+                                    <div className="flex items-start justify-between mb-8">
                                         <div
-                                            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                                            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl"
                                             style={{
-                                                background: `linear-gradient(135deg, ${meta.color}33, ${meta.color}1a)`,
+                                                background: `linear-gradient(135deg, ${meta.color}33, ${meta.color}11)`,
                                                 border: `1px solid ${meta.color}44`,
-                                                boxShadow: `0 0 20px ${meta.glow}`,
                                             }}
                                         >
-                                            <Icon className="h-6 w-6" style={{ color: meta.color }} />
+                                            <Icon className="h-7 w-7" style={{ color: meta.color }} />
                                         </div>
-                                        <div>
-                                            <h3 className="text-white font-bold text-lg leading-tight">
-                                                {plan.name}
-                                            </h3>
-                                            <p className="text-gray-500 text-xs font-mono">{plan.slug}</p>
-                                        </div>
+                                        {isActive && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                Active
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Price */}
-                                    <div className="mb-4">
+                                    <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+                                    <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                                        {plan.description || "The perfect starting point for your journey."}
+                                    </p>
+
+                                    <div className="mb-8 p-6 rounded-3xl bg-white/5 border border-white/5">
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-extrabold text-white">
+                                            <span className="text-4xl font-black text-white">
                                                 {formatCurrency(plan.price_cents, plan.currency, geo.isIndia).display}
                                             </span>
-                                            <span className="text-gray-500 text-sm">
+                                            <span className="text-gray-500 text-sm font-medium">
                                                 {formatInterval(plan.interval, plan.interval_count)}
                                             </span>
                                         </div>
                                         {plan.trial_days > 0 && (
-                                            <p className="text-xs mt-1" style={{ color: meta.color }}>
-                                                🎁 {plan.trial_days}-day free trial included
-                                            </p>
+                                            <div className="mt-3 flex items-center gap-2 text-indigo-400 font-bold text-xs">
+                                                <Zap className="h-3 w-3 fill-current" />
+                                                {plan.trial_days} Days Free Trial
+                                            </div>
                                         )}
                                     </div>
 
-                                    {/* Description */}
-                                    {plan.description && (
-                                        <p className="text-gray-400 text-sm leading-relaxed mb-4">
-                                            {plan.description}
-                                        </p>
-                                    )}
-
-                                    {/* Features */}
-                                    {plan.features && Object.keys(plan.features).length > 0 && (
-                                        <div className="space-y-2">
-                                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                                                Includes
-                                            </p>
-                                            <ul className="space-y-1.5">
+                                    <div className="flex-1 space-y-4 mb-10">
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Everything in {plan.name}:</p>
+                                        {plan.features && Object.keys(plan.features).length > 0 && (
+                                            <ul className="space-y-4">
                                                 {Object.entries(plan.features).flatMap(([category, details]) => {
                                                     if (typeof details !== "object" || !details) return [];
-                                                    return Object.entries(details).slice(0, 3).map(([key, value]) => (
-                                                        <li
-                                                            key={`${category}-${key}`}
-                                                            className="flex items-center gap-2 text-sm"
-                                                        >
-                                                            <CheckCircle2
-                                                                className="h-3.5 w-3.5 flex-shrink-0"
-                                                                style={{ color: meta.color }}
-                                                            />
-                                                            <span className="text-gray-300">
-                                                                {key.replace(/_/g, " ")}:{" "}
-                                                                <span className="text-gray-400 font-medium">
-                                                                    {Array.isArray(value)
-                                                                        ? value.join(", ")
-                                                                        : value === null
-                                                                            ? "Unlimited"
-                                                                            : typeof value === "boolean"
-                                                                                ? value ? "✓" : "✗"
-                                                                                : String(value)}
-                                                                </span>
+                                                    return Object.entries(details).slice(0, 4).map(([key, value]) => (
+                                                        <li key={`${category}-${key}`} className="flex items-start gap-3">
+                                                            <div className="mt-1 w-4 h-4 rounded-full bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                                                                <CheckCircle2 className="h-3 w-3 text-indigo-400" />
+                                                            </div>
+                                                            <span className="text-gray-300 text-sm">
+                                                                <span className="capitalize">{key.replace(/_/g, " ")}</span>
+                                                                <span className="ml-1 text-gray-500">: {String(value)}</span>
                                                             </span>
                                                         </li>
                                                     ));
                                                 })}
                                             </ul>
-                                        </div>
-                                    )}
-                                </div>
+                                        )}
+                                    </div>
 
-                                {/* CTA */}
-                                <div className="p-6 pt-0">
                                     <button
-                                        id={`select-plan-btn-${plan.id}`}
                                         onClick={() => setSelectedPlan(plan)}
                                         disabled={isActive}
-                                        className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                                        style={
-                                            isActive
-                                                ? {
-                                                    background: "rgba(34,197,94,0.1)",
-                                                    border: "1px solid rgba(34,197,94,0.3)",
-                                                    color: "#4ade80",
-                                                }
-                                                : {
-                                                    background: `linear-gradient(135deg, ${meta.color}, ${meta.color}cc)`,
-                                                    boxShadow: `0 6px 20px ${meta.glow}`,
-                                                    color: "white",
-                                                }
-                                        }
+                                        className={`group/btn relative w-full py-4 rounded-2xl font-black text-sm transition-all duration-300 overflow-hidden ${isActive
+                                            ? "bg-white/5 text-gray-500 cursor-not-allowed border border-white/5"
+                                            : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-xl hover:shadow-indigo-500/20"
+                                            }`}
                                     >
-                                        {isActive ? (
-                                            <>
-                                                <CheckCircle2 className="h-4 w-4" /> Current Plan
-                                            </>
-                                        ) : (
-                                            <>
-                                                Get Started <ArrowRight className="h-4 w-4" />
-                                            </>
+                                        <span className="relative z-10 flex items-center justify-center gap-2">
+                                            {isActive ? 'Current Plan' : 'Select Plan'}
+                                            {!isActive && <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />}
+                                        </span>
+                                        {!isActive && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
                                         )}
                                     </button>
                                 </div>
                             </div>
                         );
                     })}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-6">
+                        <Zap className="h-10 w-10 text-indigo-400" />
+                    </div>
+                    <h3 className="text-white text-xl font-bold mb-2">No active plans found</h3>
+                    <p className="text-gray-500 max-w-sm">We're updating our offers. Please check back in a few minutes.</p>
                 </div>
             )}
 
