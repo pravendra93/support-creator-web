@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { trackSignupClick } from "@/lib/ga"
 
 const formSchema = z.object({
     email: z.string().email({
@@ -153,7 +154,11 @@ export function LoginForm() {
             <CardFooter className="flex justify-center">
                 <p className="text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
-                    <Link href="/register" className="text-primary hover:underline">
+                    <Link
+                        href="/register"
+                        className="text-primary hover:underline"
+                        onClick={() => trackSignupClick()}
+                    >
                         Sign up
                     </Link>
                 </p>

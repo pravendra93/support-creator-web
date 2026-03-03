@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Plan, PlanFeatures } from "@/types/plan";
+import { trackPricingViewed, trackSignupClick, trackCtaClicked } from "@/lib/ga";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -91,7 +92,10 @@ export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] })
         if (!ref) return;
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) setIsVisible(true);
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    trackPricingViewed();
+                }
             },
             { threshold: 0.1 }
         );
@@ -230,6 +234,7 @@ export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] })
                                                 : "bg-white/5 hover:bg-white/10 border border-white/10 text-white"
                                                 }`}
                                             variant={popular ? "default" : "outline"}
+                                            onClick={() => trackSignupClick()}
                                         >
                                             {plan.price_cents === 0 ? "Get Started Free" : "Get Started"}
                                         </Button>

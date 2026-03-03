@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import HeroSlider from "./hero-slider";
+import { trackSignupClick, trackCtaClicked } from "@/lib/ga";
 
 export default function Hero() {
     return (
@@ -28,6 +31,7 @@ export default function Hero() {
                             <Button
                                 size="lg"
                                 className="h-13 px-8 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/25 transition-all duration-300 hover:shadow-purple-500/40 hover:scale-[1.02] cursor-pointer"
+                                onClick={() => trackSignupClick()}
                             >
                                 Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
@@ -37,6 +41,7 @@ export default function Hero() {
                                 variant="outline"
                                 size="lg"
                                 className="h-13 px-8 rounded-xl border-white/10 hover:bg-white/5 transition-all duration-300 cursor-pointer"
+                                onClick={() => trackCtaClicked("Hero: See How It Works")}
                             >
                                 See How It Works
                             </Button>
