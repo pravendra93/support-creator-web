@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { trackSignupCompleted } from "@/lib/ga"
 
 const formSchema = z.object({
     firstName: z.string().min(2, {
@@ -79,6 +80,7 @@ export function RegisterForm() {
                 throw new Error(data.message || "Registration failed")
             }
 
+            trackSignupCompleted()
             setSuccess("Successfully registered. Please check your email to verify email.")
             form.reset()
         } catch (err) {
