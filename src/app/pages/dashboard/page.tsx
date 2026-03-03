@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Activity, MessageSquare, Users, Zap, Search, Clock, ArrowUpRight, Signal, Cpu, Server, Database, LayoutGrid, FileText } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/context/auth-context";
+import { useRouter } from "next/navigation";
 
 import { PageHeader } from "@/components/shared/page-header";
 
 export default function DashboardPage() {
+    const router = useRouter();
     const { user } = useAuth();
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -19,6 +21,19 @@ export default function DashboardPage() {
                 const res = await fetch("/api/dashboard/stats");
                 if (res.ok) {
                     const data = await res.json();
+
+                    // Redirect based on setup status if not super admin
+                    if (data.role !== "super_admin") {
+                        if (data.tenant_name === "No Tenant Found" || !data.tenant_id) {
+                            router.push("/pages/tenants/new");
+                            return;
+                        }
+                        if (!data.plan || data.plan === "none") {
+                            router.push("/pages/billing");
+                            return;
+                        }
+                    }
+
                     setStats(data);
                 }
             } catch (error) {
@@ -28,7 +43,7 @@ export default function DashboardPage() {
             }
         }
         fetchStats();
-    }, []);
+    }, [router]);
 
     if (loading) {
         return (

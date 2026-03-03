@@ -11,6 +11,8 @@ interface User {
     role?: string;
     tenant_id?: string;
     is_active?: boolean;
+    is_subscribed?: boolean;
+    plan_name?: string | null;
     created_at?: string;
 }
 
