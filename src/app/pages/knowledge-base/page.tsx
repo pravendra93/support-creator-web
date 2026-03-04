@@ -81,37 +81,58 @@ function KnowledgeBaseContent() {
     }, [user, urlTenantId]);
 
     // FETCH FILES
-    const fetchFiles = async () => {
-        if (!selectedTenantId) return;
-        try {
-            const res = await fetch(`/api/knowledge-base?tenant_id=${selectedTenantId}`);
-            if (res.ok) {
-                const data = await res.json();
-                const workspaceName = tenants.find(t => t.id === selectedTenantId)?.name || "Default";
+    const fetchFiles = async (tenantList: Tenant[] = tenants) => {
+        if (tenantList.length === 0) return;
 
-                const mappedFiles: KnowledgeBaseFile[] = data.map((f: any) => ({
-                    id: f.id,
-                    name: f.file_name,
-                    workspaceName: workspaceName,
-                    type: f.file_type?.toUpperCase() || 'PDF',
-                    size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
-                    status: f.status,
-                    uploadedAt: new Date(f.created_at),
-                    storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`,
-                    estimated_time: f.estimated_time
-                }));
-                setFiles(mappedFiles);
-            }
+        try {
+            setIsLoading(true);
+            const allFiles: KnowledgeBaseFile[] = [];
+
+            // If we have multiple tenants, we want to show all of them as per user request
+            // We use Promise.all to fetch from all tenants in parallel
+            const fetchPromises = tenantList.map(async (tenant) => {
+                try {
+                    const res = await fetch(`/api/knowledge-base?tenant_id=${tenant.id}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        return data.map((f: any) => ({
+                            id: f.id,
+                            name: f.file_name,
+                            workspaceName: tenant.name,
+                            type: f.file_type?.toUpperCase() || 'PDF',
+                            size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
+                            status: f.status,
+                            uploadedAt: new Date(f.created_at),
+                            storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`,
+                            estimated_time: f.estimated_time,
+                            tenantId: tenant.id // Keep track of which tenant this belongs to
+                        }));
+                    }
+                } catch (err) {
+                    console.error(`Failed to fetch files for tenant ${tenant.id}`, err);
+                }
+                return [];
+            });
+
+            const results = await Promise.all(fetchPromises);
+            results.forEach(fileGroup => allFiles.push(...fileGroup));
+
+            // Sort by uploadedAt descending
+            allFiles.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
+
+            setFiles(allFiles);
         } catch (error) {
             console.error("Failed to fetch files", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        if (selectedTenantId) {
+        if (tenants.length > 0) {
             fetchFiles();
         }
-    }, [selectedTenantId]);
+    }, [tenants]);
 
     const handleView = async (fileId: string) => {
         try {
@@ -360,10 +381,6 @@ function KnowledgeBaseContent() {
             {tenants.length === 0 && !isLoadingTenants ? (
                 <div className="mt-8">
                     <NoWorkspaceState message="Create a workspace first then you can upload docs" />
-                </div>
-            ) : !selectedTenantId ? (
-                <div className="flex h-64 w-full flex-col items-center justify-center rounded-lg border border-dashed text-center mt-6">
-                    <p className="text-muted-foreground">Please select a workspace to view knowledge base.</p>
                 </div>
             ) : files.length === 0 && !isLoading ? (
                 <EmptyState onUpload={handleUploadClick} />

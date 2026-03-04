@@ -40,14 +40,16 @@ const formSchema = z.z.object({
 
 interface CreateApiKeyModalProps {
     isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
+    onClose: (createdKey?: string) => void;
+    onSuccess: (createdKey?: string) => void;
+    initialTenantId?: string | null;
 }
 
 export function CreateApiKeyModal({
     isOpen,
     onClose,
     onSuccess,
+    initialTenantId,
 }: CreateApiKeyModalProps) {
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [isLoadingTenants, setIsLoadingTenants] = useState(false);
@@ -63,13 +65,7 @@ export function CreateApiKeyModal({
         },
     });
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchTenants();
-        }
-    }, [isOpen]);
-
-    const fetchTenants = async () => {
+    const fetchTenants = React.useCallback(async () => {
         setIsLoadingTenants(true);
         try {
             const response = await fetch("/api/tenants");
@@ -82,7 +78,16 @@ export function CreateApiKeyModal({
         } finally {
             setIsLoadingTenants(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchTenants();
+            if (initialTenantId) {
+                form.setValue("tenant_id", initialTenantId);
+            }
+        }
+    }, [isOpen, initialTenantId, form, fetchTenants]);
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
@@ -102,7 +107,7 @@ export function CreateApiKeyModal({
             }
 
             setCreatedKey(data.full_key || data.key);
-            onSuccess();
+            onSuccess(data.full_key || data.key);
         } catch (error) {
             console.error("Error creating API key:", error);
         } finally {
@@ -119,13 +124,14 @@ export function CreateApiKeyModal({
     };
 
     const handleClose = () => {
+        const keyToReturn = createdKey;
         setCreatedKey(null);
         form.reset();
-        onClose();
+        onClose(keyToReturn || undefined);
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={handleClose}>
+        <Dialog open={isOpen} onOpenChange={() => handleClose()}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>{createdKey ? "View API Key" : "Create API Key"}</DialogTitle>
@@ -165,7 +171,7 @@ export function CreateApiKeyModal({
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button type="button" onClick={handleClose} className="w-full cursor-pointer">
+                            <Button type="button" onClick={() => handleClose()} className="w-full cursor-pointer">
                                 Done
                             </Button>
                         </DialogFooter>
@@ -218,7 +224,7 @@ export function CreateApiKeyModal({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={onClose}
+                                    onClick={() => onClose()}
                                     disabled={isSubmitting}
                                     className="cursor-pointer"
                                 >

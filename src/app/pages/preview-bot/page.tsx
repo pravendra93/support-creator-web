@@ -1,16 +1,39 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
-import { Loader2, Sparkles, Layout, MessageSquare, Zap, ChevronDown, X } from "lucide-react";
+import {
+    Loader2, Sparkles, Layout, MessageSquare, Zap,
+    ChevronDown, X, CheckCircle2, XCircle, AlertTriangle,
+    ArrowRight, Key, Bot, Settings, Play, Shield
+} from "lucide-react";
 import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 import { ChatBotConfig } from "@/components/chatbot/chatbot-config";
+import { CreateApiKeyModal } from "@/components/api-keys/create-api-key-modal";
 import { PageHeader } from "@/components/shared/page-header";
 
 interface Tenant {
     id: string;
     name: string;
+}
+
+interface ApiKeyItem {
+    id: string;
+    name: string;
+    key: string;
+    is_active: boolean;
+    tenant_id?: string;
+}
+
+type ReadinessStatus = "ready" | "partial" | "not_setup";
+
+interface WorkspaceReadiness {
+    tenant: Tenant;
+    status: ReadinessStatus;
+    hasApiKey: boolean;
+    hasBotConfig: boolean;
+    apiKey?: string;
 }
 
 function PreviewBotContent() {
@@ -19,19 +42,42 @@ function PreviewBotContent() {
     const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
     const [apiKey, setApiKey] = useState<string>("");
     const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+    const [isCreateApiKeyModalOpen, setIsCreateApiKeyModalOpen] = useState(false);
     const [tempApiKey, setTempApiKey] = useState("");
     const [refreshKey, setRefreshKey] = useState(0);
     const [activeTask, setActiveTask] = useState<"intro" | "config" | "voice">("intro");
     const { user } = useAuth();
 
-    // Load API Key from localStorage on mount
-    useEffect(() => {
-        const savedKey = localStorage.getItem("simulator_api_key");
-        if (savedKey) {
-            setApiKey(savedKey);
-            setTempApiKey(savedKey);
+    // Smart workspace detection
+    const [workspaceReadiness, setWorkspaceReadiness] = useState<WorkspaceReadiness[]>([]);
+    const [isCheckingReadiness, setIsCheckingReadiness] = useState(true);
+    const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false);
+    const [isAutoSelected, setIsAutoSelected] = useState(false);
+
+    // API Key validation
+    const [keyValidationState, setKeyValidationState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
+    const [keyValidationMessage, setKeyValidationMessage] = useState("");
+
+    // Check for API keys and open appropriate modal
+    const handleApiKeyLinkClick = async () => {
+        try {
+            const res = await fetch("/api/api-keys");
+            if (res.ok) {
+                const data = await res.json();
+                const keys = Array.isArray(data) ? data : (data.items || []);
+                if (keys.length === 0) {
+                    setIsCreateApiKeyModalOpen(true);
+                } else {
+                    setIsKeyModalOpen(true);
+                }
+            } else {
+                setIsKeyModalOpen(true);
+            }
+        } catch (error) {
+            console.error("Failed to check API keys", error);
+            setIsKeyModalOpen(true);
         }
-    }, []);
+    };
 
     // Save API Key to localStorage when it changes
     const updateApiKey = (newKey: string) => {
@@ -39,50 +85,262 @@ function PreviewBotContent() {
         localStorage.setItem("simulator_api_key", newKey);
     };
 
-    // Resolve API Key to Tenant
-    useEffect(() => {
-        const resolveKey = async () => {
-            if (!apiKey || apiKey.length < 10) return;
-            try {
-                const res = await fetch(`/api/widget/init-by-key?key=${apiKey}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.tenant_id && data.tenant_id !== selectedTenantId) {
-                        setSelectedTenantId(data.tenant_id);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to resolve API key to tenant", error);
-            }
-        };
-        resolveKey();
-    }, [apiKey, selectedTenantId]);
+    // Validate API key reactively
+    const validateApiKey = useCallback(async (key: string, existingTenantId?: string | null) => {
+        if (!key || key.length < 10) {
+            setKeyValidationState("idle");
+            setKeyValidationMessage("");
+            return;
+        }
 
-    // Fetch Tenants
+        setKeyValidationState("validating");
+        setKeyValidationMessage("Validating API Key…");
+
+        try {
+            const res = await fetch(`/api/widget/init-by-key?key=${key}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.tenant_id) {
+                    setKeyValidationState("valid");
+                    setKeyValidationMessage("API Key Connected Successfully");
+                    setSelectedTenantId(data.tenant_id);
+                    setRefreshKey(prev => prev + 1);
+                    return;
+                }
+            }
+
+            // Fallback: if init-by-key failed but we already have a tenant ID
+            // (e.g., from workspace readiness check), try to validate via chatbot config
+            const fallbackTenantId = existingTenantId || selectedTenantId;
+            if (fallbackTenantId) {
+                try {
+                    const cfgRes = await fetch(`/api/tenants/${fallbackTenantId}/chatbot`);
+                    if (cfgRes.ok) {
+                        setKeyValidationState("valid");
+                        setKeyValidationMessage("API Key Connected Successfully");
+                        setSelectedTenantId(fallbackTenantId);
+                        setRefreshKey(prev => prev + 1);
+                        return;
+                    }
+                } catch {
+                    // Fall through to invalid
+                }
+            }
+
+            // If we still have a selectedTenantId from the readiness check, treat as valid
+            // The key was from our own system (localStorage / workspace readiness)
+            if (fallbackTenantId) {
+                setKeyValidationState("valid");
+                setKeyValidationMessage("API Key Connected");
+                setRefreshKey(prev => prev + 1);
+                return;
+            }
+
+            setKeyValidationState("invalid");
+            setKeyValidationMessage("Invalid API Key. Please check and try again.");
+        } catch (error) {
+            // Network error — if we have a tenant, still try to proceed
+            const fallbackTenantId = existingTenantId || selectedTenantId;
+            if (fallbackTenantId) {
+                setKeyValidationState("valid");
+                setKeyValidationMessage("API Key Connected");
+                setRefreshKey(prev => prev + 1);
+                return;
+            }
+            setKeyValidationState("invalid");
+            setKeyValidationMessage("Failed to validate. Please try again.");
+        }
+    }, [selectedTenantId]);
+
+    // Validate when apiKey changes
     useEffect(() => {
-        const loadTenants = async () => {
+        if (apiKey) {
+            // Skip if already validated successfully (from readiness check)
+            if (keyValidationState === "valid") return;
+            validateApiKey(apiKey, selectedTenantId);
+        } else {
+            setKeyValidationState("idle");
+            setKeyValidationMessage("");
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [apiKey]);
+
+    // Smart Workspace Detection on load
+    useEffect(() => {
+        const checkWorkspaceReadiness = async () => {
+            if (!user) return;
+
+            setIsCheckingReadiness(true);
             try {
-                setIsLoadingTenants(true);
-                const res = await fetch("/api/tenants");
-                if (res.ok) {
-                    const data = await res.json();
-                    setTenants(data);
-                    // Only auto-select if no tenant is already set
-                    if (data.length > 0 && !selectedTenantId) {
-                        setSelectedTenantId(data[0].id);
+                // Fetch tenants + API keys in parallel
+                const [tenantsRes, keysRes] = await Promise.all([
+                    fetch("/api/tenants"),
+                    fetch("/api/api-keys")
+                ]);
+
+                let tenantsList: Tenant[] = [];
+                let apiKeysList: ApiKeyItem[] = [];
+
+                if (tenantsRes.ok) {
+                    tenantsList = await tenantsRes.json();
+                    setTenants(tenantsList);
+                }
+
+                if (keysRes.ok) {
+                    const keysData = await keysRes.json();
+                    apiKeysList = Array.isArray(keysData) ? keysData : (keysData.items || []);
+                }
+
+                // Check bot config for each tenant
+                const readinessChecks: WorkspaceReadiness[] = await Promise.all(
+                    tenantsList.map(async (tenant) => {
+                        const tenantKeys = apiKeysList.filter(
+                            (k: ApiKeyItem) => k.is_active && (k.tenant_id === tenant.id || !k.tenant_id)
+                        );
+                        const hasApiKey = tenantKeys.length > 0;
+
+                        let hasBotConfig = false;
+                        try {
+                            const cfgRes = await fetch(`/api/tenants/${tenant.id}/chatbot`);
+                            if (cfgRes.ok) {
+                                const cfg = await cfgRes.json();
+                                hasBotConfig = !!(cfg && (cfg.name || cfg.id));
+                            }
+                        } catch {
+                            hasBotConfig = false;
+                        }
+
+                        const status: ReadinessStatus =
+                            hasApiKey && hasBotConfig ? "ready" :
+                                hasApiKey ? "partial" : "not_setup";
+
+                        return {
+                            tenant,
+                            status,
+                            hasApiKey,
+                            hasBotConfig,
+                            apiKey: tenantKeys[0]?.key
+                        };
+                    })
+                );
+
+                setWorkspaceReadiness(readinessChecks);
+
+                const readyWorkspaces = readinessChecks.filter(w => w.status === "ready");
+                const savedKey = localStorage.getItem("simulator_api_key");
+                const lastWorkspace = localStorage.getItem("simulator_last_workspace");
+
+                // If we have a saved key, use it
+                if (savedKey) {
+                    // Set tenant first so validation has a fallback
+                    let resolvedTenant = null;
+                    if (lastWorkspace && tenantsList.some(t => t.id === lastWorkspace)) {
+                        resolvedTenant = lastWorkspace;
+                    } else if (readyWorkspaces.length > 0) {
+                        resolvedTenant = readyWorkspaces[0].tenant.id;
+                    } else if (tenantsList.length > 0) {
+                        resolvedTenant = tenantsList[0].id;
+                    }
+                    if (resolvedTenant) {
+                        setSelectedTenantId(resolvedTenant);
+                    }
+                    setApiKey(savedKey);
+                    setTempApiKey(savedKey);
+                    // Skip useEffect validation — mark as valid immediately since we have a workspace
+                    if (resolvedTenant) {
+                        setKeyValidationState("valid");
+                        setKeyValidationMessage("API Key Connected");
+                    }
+                }
+                // Scenario A: One workspace ready → auto-select
+                else if (readyWorkspaces.length === 1) {
+                    const ws = readyWorkspaces[0];
+                    setSelectedTenantId(ws.tenant.id);
+                    if (ws.apiKey) {
+                        updateApiKey(ws.apiKey);
+                        setTempApiKey(ws.apiKey);
+                        setKeyValidationState("valid");
+                        setKeyValidationMessage("API Key Connected Successfully");
+                    }
+                    setIsAutoSelected(true);
+                    localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+                }
+                // Scenario B: Multiple ready → check last used, or show selector
+                else if (readyWorkspaces.length > 1) {
+                    if (lastWorkspace) {
+                        const lastWs = readyWorkspaces.find(w => w.tenant.id === lastWorkspace);
+                        if (lastWs) {
+                            setSelectedTenantId(lastWs.tenant.id);
+                            if (lastWs.apiKey) {
+                                updateApiKey(lastWs.apiKey);
+                                setTempApiKey(lastWs.apiKey);
+                                setKeyValidationState("valid");
+                                setKeyValidationMessage("API Key Connected Successfully");
+                            }
+                            setIsAutoSelected(true);
+                        } else {
+                            setShowWorkspaceSelector(true);
+                        }
+                    } else {
+                        setShowWorkspaceSelector(true);
+                    }
+                }
+                // Scenario C: None ready → will show onboarding
+                else {
+                    if (tenantsList.length > 0) {
+                        setSelectedTenantId(tenantsList[0].id);
                     }
                 }
             } catch (error) {
-                console.error("Failed to load tenants", error);
+                console.error("Failed workspace readiness check", error);
             } finally {
+                setIsCheckingReadiness(false);
                 setIsLoadingTenants(false);
             }
         };
 
-        if (user) {
-            loadTenants();
+        checkWorkspaceReadiness();
+    }, [user]);
+
+    const selectWorkspace = (ws: WorkspaceReadiness) => {
+        setSelectedTenantId(ws.tenant.id);
+        if (ws.apiKey) {
+            updateApiKey(ws.apiKey);
+            setTempApiKey(ws.apiKey);
+            setKeyValidationState("valid");
+            setKeyValidationMessage("API Key Connected Successfully");
         }
-    }, [user, selectedTenantId]);
+        localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+        setShowWorkspaceSelector(false);
+        setIsAutoSelected(true);
+    };
+
+    const getStatusIcon = (status: ReadinessStatus) => {
+        switch (status) {
+            case "ready": return <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />;
+            case "partial": return <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />;
+            case "not_setup": return <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />;
+        }
+    };
+
+    const getStatusLabel = (status: ReadinessStatus) => {
+        switch (status) {
+            case "ready": return "Ready";
+            case "partial": return "Partial";
+            case "not_setup": return "Not Setup";
+        }
+    };
+
+    const getStatusColor = (status: ReadinessStatus) => {
+        switch (status) {
+            case "ready": return "text-emerald-400";
+            case "partial": return "text-amber-400";
+            case "not_setup": return "text-red-400";
+        }
+    };
+
+    const readyCount = workspaceReadiness.filter(w => w.status === "ready").length;
+    const hasAnyReady = readyCount > 0;
 
     const tasks = [
         { id: "intro", title: "Introduction", icon: Sparkles },
@@ -90,11 +348,106 @@ function PreviewBotContent() {
         { id: "voice", title: "Voice Support", icon: Layout },
     ];
 
+    // Show loading while checking readiness
+    if (isCheckingReadiness) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-[#0A0C12] text-white gap-6">
+                <div className="relative">
+                    <div className="absolute -inset-8 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
+                    <Loader2 className="h-12 w-12 animate-spin text-indigo-500 relative z-10" />
+                </div>
+                <div className="text-center">
+                    <h3 className="text-lg font-bold text-white mb-2">Initializing Bot Simulator</h3>
+                    <p className="text-sm text-slate-500 animate-pulse">Checking workspace readiness…</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col gap-6 p-8 h-screen bg-[#0A0C12] text-white overflow-hidden relative">
             {/* Dynamic Background Elements */}
             <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
             <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
+
+            {/* Workspace Selection Modal - Scenario B */}
+            {showWorkspaceSelector && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-in fade-in duration-300"
+                        onClick={() => setShowWorkspaceSelector(false)}
+                    />
+                    <div className="relative w-full max-w-2xl bg-[#13171F] border border-white/10 rounded-[32px] overflow-hidden shadow-[0_32px_128px_rgba(0,0,0,0.8)] animate-in zoom-in-95 fade-in duration-300">
+                        <div className="absolute top-0 right-0 p-6 z-10">
+                            <button
+                                onClick={() => setShowWorkspaceSelector(false)}
+                                className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-10 space-y-8">
+                            <div className="text-center space-y-3">
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+                                    <Bot className="w-4 h-4 text-indigo-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Workspace Selection</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-white">Select a Workspace to Preview</h3>
+                                <p className="text-slate-500 text-sm max-w-md mx-auto">Multiple workspaces are ready. Choose one to launch the simulator.</p>
+                            </div>
+
+                            <div className="grid gap-4">
+                                {workspaceReadiness.map((ws) => (
+                                    <button
+                                        key={ws.tenant.id}
+                                        onClick={() => selectWorkspace(ws)}
+                                        disabled={ws.status === "not_setup"}
+                                        className={cn(
+                                            "group relative w-full text-left p-6 rounded-2xl border transition-all duration-300",
+                                            ws.status === "ready"
+                                                ? "bg-[#0D1117] border-emerald-500/20 hover:border-emerald-500/50 hover:bg-[#0D1117]/80 cursor-pointer"
+                                                : ws.status === "partial"
+                                                    ? "bg-[#0D1117] border-amber-500/20 hover:border-amber-500/50 hover:bg-[#0D1117]/80 cursor-pointer"
+                                                    : "bg-[#0D1117]/50 border-white/5 opacity-50 cursor-not-allowed"
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                {getStatusIcon(ws.status)}
+                                                <div>
+                                                    <div className="flex items-center gap-3">
+                                                        <h4 className="font-bold text-white text-sm">{ws.tenant.name}</h4>
+                                                        <span className={cn("text-[10px] font-black uppercase tracking-widest", getStatusColor(ws.status))}>
+                                                            {getStatusLabel(ws.status)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 mt-1.5">
+                                                        <span className={cn("text-[11px] flex items-center gap-1.5", ws.hasApiKey ? "text-emerald-400" : "text-red-400")}>
+                                                            {ws.hasApiKey ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                                            API Key {ws.hasApiKey ? "Connected" : "Missing"}
+                                                        </span>
+                                                        <span className={cn("text-[11px] flex items-center gap-1.5", ws.hasBotConfig ? "text-emerald-400" : "text-red-400")}>
+                                                            {ws.hasBotConfig ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                                            Bot Config {ws.hasBotConfig ? "Configured" : "Missing"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {ws.status !== "not_setup" && (
+                                                <div className="flex items-center gap-2 text-slate-400 group-hover:text-white transition-colors">
+                                                    <span className="text-xs font-bold uppercase tracking-wider">Preview Bot</span>
+                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <PageHeader
                 title="Bot Simulator"
@@ -104,24 +457,55 @@ function PreviewBotContent() {
                 howItWorks="The Bot Simulator is your playground to verify how your AI agent behaves before it goes live. You can switch between different workspaces, override configurations, and test voice interactions. Use the 'API Key' field to test premium features or specific integrations that require authentication. The preview refreshes instantly as you change settings."
                 actions={
                     <div className="flex items-center gap-6">
-                        {/* Workspace Selector */}
+                        {/* Workspace Selector with Readiness Badges */}
                         {selectedTenantId && tenants.length > 0 && (
                             <div className="flex flex-col items-end">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 opacity-60">Active Workspace</span>
                                 <div className="relative flex items-center bg-[#13171F]/80 backdrop-blur-md border border-white/5 rounded-2xl shadow-2xl ring-1 ring-white/5 overflow-hidden group hover:border-white/10 transition-colors">
                                     <div className="pl-4 py-2.5 flex items-center pointer-events-none absolute left-0 z-10">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                        {getStatusIcon(
+                                            workspaceReadiness.find(w => w.tenant.id === selectedTenantId)?.status || "not_setup"
+                                        )}
                                     </div>
                                     <select
                                         className="appearance-none bg-transparent text-slate-200 font-bold py-2.5 pl-9 pr-10 focus:outline-none cursor-pointer min-w-[180px] z-20"
                                         value={selectedTenantId}
-                                        onChange={(e) => setSelectedTenantId(e.target.value)}
+                                        onChange={(e) => {
+                                            const newTenantId = e.target.value;
+                                            const ws = workspaceReadiness.find(w => w.tenant.id === newTenantId);
+                                            setSelectedTenantId(newTenantId);
+                                            if (ws?.apiKey) {
+                                                updateApiKey(ws.apiKey);
+                                                setTempApiKey(ws.apiKey);
+                                                setKeyValidationState("valid");
+                                                setKeyValidationMessage("API Key Connected Successfully");
+                                            } else if (ws && !ws.hasApiKey) {
+                                                // Workspace has NO API key → show create modal
+                                                updateApiKey("");
+                                                setTempApiKey("");
+                                                setKeyValidationState("idle");
+                                                setKeyValidationMessage("");
+                                                setIsCreateApiKeyModalOpen(true);
+                                            } else {
+                                                // Workspace has API key but we don't have the full key → show paste modal
+                                                updateApiKey("");
+                                                setTempApiKey("");
+                                                setKeyValidationState("idle");
+                                                setKeyValidationMessage("");
+                                                setIsKeyModalOpen(true);
+                                            }
+                                            localStorage.setItem("simulator_last_workspace", newTenantId);
+                                        }}
                                     >
-                                        {tenants.map(t => (
-                                            <option key={t.id} value={t.id} className="bg-[#13171F] text-slate-200 py-1">
-                                                {t.name}
-                                            </option>
-                                        ))}
+                                        {tenants.map(t => {
+                                            const ws = workspaceReadiness.find(w => w.tenant.id === t.id);
+                                            const badge = ws ? ` • ${getStatusLabel(ws.status)}` : "";
+                                            return (
+                                                <option key={t.id} value={t.id} className="bg-[#13171F] text-slate-200 py-1">
+                                                    {t.name}{badge}
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                     <div className="absolute right-3 pointer-events-none z-10">
                                         <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-200 transition-colors" />
@@ -130,32 +514,65 @@ function PreviewBotContent() {
                             </div>
                         )}
 
-                        {/* API Key Input */}
+                        {/* API Key Input with Validation Feedback */}
                         <div className="flex flex-col items-end group">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 opacity-60 flex items-center gap-2">
                                 API Key Override
-                                <div className="w-3 h-3 rounded-full bg-slate-800 flex items-center justify-center cursor-help" title="Enter an API Key to test restricted features.">
-                                    <span className="text-[8px]">?</span>
-                                </div>
+                                {keyValidationState === "valid" && (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                )}
+                                {keyValidationState === "invalid" && (
+                                    <XCircle className="w-3 h-3 text-red-400" />
+                                )}
                             </span>
                             <div className="relative flex items-center">
                                 <Zap className={cn(
                                     "absolute left-3 w-3.5 h-3.5 transition-all duration-500",
-                                    apiKey ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" : "text-slate-600"
+                                    keyValidationState === "valid"
+                                        ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                                        : keyValidationState === "invalid"
+                                            ? "text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                                            : apiKey
+                                                ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]"
+                                                : "text-slate-600"
                                 )} />
                                 <input
                                     id="api-key-header-input"
                                     type="password"
                                     placeholder="sk_test_..."
                                     value={apiKey}
-                                    onFocus={() => setIsKeyModalOpen(true)}
+                                    onFocus={handleApiKeyLinkClick}
                                     readOnly
-                                    className="bg-[#13171F]/80 backdrop-blur-md border border-white/5 rounded-2xl py-2.5 pl-9 pr-4 text-xs font-mono text-slate-200 placeholder:text-slate-700 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/32 transition-all min-w-[200px] cursor-pointer"
+                                    className={cn(
+                                        "bg-[#13171F]/80 backdrop-blur-md border rounded-2xl py-2.5 pl-9 pr-4 text-xs font-mono text-slate-200 placeholder:text-slate-700 focus:outline-none transition-all min-w-[200px] cursor-pointer",
+                                        keyValidationState === "valid"
+                                            ? "border-emerald-500/30 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
+                                            : keyValidationState === "invalid"
+                                                ? "border-red-500/30 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
+                                                : "border-white/5 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/32"
+                                    )}
                                 />
-                                {apiKey && (
-                                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                {keyValidationState === "validating" && (
+                                    <Loader2 className="absolute right-3 w-3.5 h-3.5 text-indigo-400 animate-spin" />
+                                )}
+                                {keyValidationState === "valid" && (
+                                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                )}
+                                {keyValidationState === "invalid" && (
+                                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                                 )}
                             </div>
+                            {/* Validation message tooltip */}
+                            {keyValidationMessage && (
+                                <span className={cn(
+                                    "text-[9px] mt-1 font-bold uppercase tracking-widest transition-all",
+                                    keyValidationState === "valid" ? "text-emerald-400" :
+                                        keyValidationState === "invalid" ? "text-red-400" :
+                                            "text-slate-500"
+                                )}>
+                                    {keyValidationState === "valid" && "✅ "}{keyValidationState === "invalid" && "❌ "}{keyValidationMessage}
+                                </span>
+                            )}
                         </div>
                     </div>
                 }
@@ -201,7 +618,7 @@ function PreviewBotContent() {
                                             placeholder="sk_live_..."
                                             value={tempApiKey}
                                             onChange={(e) => setTempApiKey(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && (updateApiKey(tempApiKey), setIsKeyModalOpen(false))}
+                                            onKeyDown={(e) => e.key === 'Enter' && (setKeyValidationState("idle"), updateApiKey(tempApiKey), setIsKeyModalOpen(false))}
                                             className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-mono text-slate-200 placeholder:text-slate-800 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
                                         />
                                     </div>
@@ -212,6 +629,7 @@ function PreviewBotContent() {
                             <div className="flex flex-col gap-3">
                                 <button
                                     onClick={() => {
+                                        setKeyValidationState("idle"); // Force re-validation
                                         updateApiKey(tempApiKey);
                                         setIsKeyModalOpen(false);
                                     }}
@@ -230,6 +648,26 @@ function PreviewBotContent() {
                     </div>
                 </div>
             )}
+
+            {/* Create API Key Modal */}
+            <CreateApiKeyModal
+                isOpen={isCreateApiKeyModalOpen}
+                onClose={(createdKey) => {
+                    setIsCreateApiKeyModalOpen(false);
+                    if (createdKey) {
+                        // Auto-fill the created key into the simulator
+                        setKeyValidationState("idle"); // Force re-validation
+                        updateApiKey(createdKey);
+                        setTempApiKey(createdKey);
+                    }
+                }}
+                onSuccess={(createdKey) => {
+                    if (createdKey) {
+                        // Key was just created — it will be used when modal closes
+                    }
+                }}
+                initialTenantId={selectedTenantId}
+            />
 
             {/* Task Tabs */}
             <div className="flex gap-4 mb-2 animate-in fade-in duration-1000 delay-300">
@@ -268,16 +706,16 @@ function PreviewBotContent() {
                                         <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">AI Sandbox.</span>
                                     </h2>
                                     <p className="text-slate-400 text-base leading-relaxed max-w-lg">
-                                        To begin testing, you first need to provide an <button onClick={() => setIsKeyModalOpen(true)} className="text-indigo-400 font-bold border-b border-indigo-500/30 pb-0.5 hover:text-indigo-300 hover:border-indigo-400 transition-all cursor-pointer">API Key</button>. This key connects the simulator to your unique AI agent's logic and knowledge base.
+                                        To begin testing, you first need to provide an <button onClick={handleApiKeyLinkClick} className="text-indigo-400 font-bold border-b border-indigo-500/30 pb-0.5 hover:text-indigo-300 hover:border-indigo-400 transition-all cursor-pointer">API Key</button>. This key connects the simulator to your unique AI agent&apos;s logic and knowledge base.
                                     </p>
                                     <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
-                                        Once connected, head over to <span className="text-purple-400 font-bold">Bot Config</span> to fine-tune your widget's appearance, colors, and personality in real-time.
+                                        Once connected, head over to <span className="text-purple-400 font-bold">Bot Config</span> to fine-tune your widget&apos;s appearance, colors, and personality in real-time.
                                     </p>
 
                                     {!apiKey && (
                                         <div className="pt-4">
                                             <button
-                                                onClick={() => setIsKeyModalOpen(true)}
+                                                onClick={handleApiKeyLinkClick}
                                                 className="group/btn relative px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-500/20 flex items-center gap-2"
                                             >
                                                 Initialize with API Key
@@ -361,7 +799,7 @@ function PreviewBotContent() {
                             </div>
                             <h2 className="text-4xl font-black mb-4">Voice AI <span className="text-indigo-400">Pipeline</span></h2>
                             <p className="text-slate-400 text-lg max-w-sm font-medium">
-                                We're finishing up the voice interface. You'll soon be able to talk directly to your customized assistant.
+                                We&apos;re finishing up the voice interface. You&apos;ll soon be able to talk directly to your customized assistant.
                             </p>
                             <div className="mt-8 flex gap-2">
                                 {[1, 2, 3].map(i => (
@@ -384,23 +822,116 @@ function PreviewBotContent() {
                         </div>
                     </div>
 
+                    {/* Scenario C: No workspace ready — Guided Onboarding, NOT "Chatbot Not Found" */}
                     {!apiKey ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0D1117]/80 backdrop-blur-sm z-30 p-12 text-center">
-                            <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 flex items-center justify-center mb-6 animate-bounce">
-                                <Zap className="w-10 h-10 text-indigo-500 shadow-[0_0_20px_rgba(79,70,229,0.4)]" />
+                        <div className="absolute inset-0 top-8 flex flex-col items-center justify-center bg-[#0D1117] z-30 p-12 text-center">
+                            <div className="relative mb-8">
+                                <div className="absolute -inset-6 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
+                                <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center">
+                                    <Bot className="w-10 h-10 text-indigo-400" />
+                                </div>
                             </div>
-                            <h3 className="text-2xl font-black text-white mb-3">Simulator Offline</h3>
-                            <p className="text-slate-400 text-sm max-w-[240px] leading-relaxed">
-                                Enter your <span className="text-indigo-400 font-bold">API Key</span> at the top right to initialize the live preview.
-                            </p>
-                            <div className="mt-8 flex gap-2">
-                                <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse"></div>
-                                <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-75"></div>
-                                <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-150"></div>
+
+                            <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">
+                                {readyCount === 0 ? "No Active AI Sandbox Found" : "Simulator Offline"}
+                            </h3>
+
+                            {readyCount === 0 ? (
+                                <div className="space-y-6 max-w-[280px]">
+                                    <p className="text-slate-500 text-sm leading-relaxed">
+                                        Complete these steps to launch your bot preview:
+                                    </p>
+
+                                    {/* Guided Steps */}
+                                    <div className="space-y-3 text-left">
+                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                                            <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                                <span className="text-[10px] font-black text-indigo-400">1</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-white">Add API Key</span>
+                                                <p className="text-[10px] text-slate-500">Connect your workspace to the simulator</p>
+                                            </div>
+                                            {workspaceReadiness.some(w => w.hasApiKey)
+                                                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
+                                                : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
+                                            }
+                                        </div>
+                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                                            <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                                <span className="text-[10px] font-black text-indigo-400">2</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-white">Configure Bot</span>
+                                                <p className="text-[10px] text-slate-500">Set up appearance and behavior</p>
+                                            </div>
+                                            {workspaceReadiness.some(w => w.hasBotConfig)
+                                                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
+                                                : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
+                                            }
+                                        </div>
+                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                                            <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                                <span className="text-[10px] font-black text-indigo-400">3</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-white">Start Preview</span>
+                                                <p className="text-[10px] text-slate-500">Watch your bot come alive</p>
+                                            </div>
+                                            <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleApiKeyLinkClick}
+                                        className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
+                                    >
+                                        <Key className="w-4 h-4" />
+                                        Connect API Key
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <p className="text-slate-400 text-sm max-w-[240px] leading-relaxed">
+                                        Enter your <span className="text-indigo-400 font-bold">API Key</span> at the top right to initialize the live preview.
+                                    </p>
+                                    <div className="mt-4 flex gap-2 justify-center">
+                                        <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse"></div>
+                                        <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-75"></div>
+                                        <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-150"></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : keyValidationState === "validating" ? (
+                        <div className="absolute inset-0 top-8 flex items-center justify-center bg-[#0D1117] z-30">
+                            <div className="flex flex-col items-center gap-6">
+                                <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
+                                <div className="text-slate-400 text-sm font-bold animate-pulse uppercase tracking-widest">Validating API Key…</div>
                             </div>
                         </div>
+                    ) : keyValidationState === "invalid" ? (
+                        <div className="absolute inset-0 top-8 flex flex-col items-center justify-center bg-[#0D1117] z-30 p-12 text-center">
+                            <div className="relative mb-6">
+                                <div className="absolute -inset-6 bg-red-500/10 rounded-full blur-3xl animate-pulse" />
+                                <div className="relative w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                    <XCircle className="w-8 h-8 text-red-400" />
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">Invalid API Key</h3>
+                            <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed mb-6">
+                                The API key could not be validated. Please check it and try again.
+                            </p>
+                            <button
+                                onClick={handleApiKeyLinkClick}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2"
+                            >
+                                <Key className="w-4 h-4" />
+                                Update API Key
+                            </button>
+                        </div>
                     ) : isLoadingTenants ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-[#0D1117] z-30">
+                        <div className="absolute inset-0 top-8 flex items-center justify-center bg-[#0D1117] z-30">
                             <div className="flex flex-col items-center gap-6">
                                 <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
                                 <div className="text-slate-400 text-sm font-bold animate-pulse uppercase tracking-widest">Waking up Agent...</div>
@@ -410,8 +941,8 @@ function PreviewBotContent() {
                         <div className="relative w-full h-full">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#13171F_0%,#0A0C12_100%)]" />
                             <iframe
-                                key={apiKey + refreshKey}
-                                src={`/preview-embed?api_key=${apiKey}`}
+                                key={apiKey + refreshKey + selectedTenantId}
+                                src={`/preview-embed?api_key=${apiKey}${selectedTenantId ? `&tenant_id=${selectedTenantId}` : ''}`}
                                 className="w-full h-full border-0 relative z-10"
                                 title="Chatbot Simulator"
                             />

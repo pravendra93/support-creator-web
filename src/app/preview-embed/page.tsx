@@ -42,39 +42,78 @@ function PreviewEmbedContent() {
 
     useEffect(() => {
         const fetchSettings = async () => {
-            if (!tenantId && !apiKey) return;
+            if (!tenantId && !apiKey) {
+                setIsLoading(false);
+                return;
+            }
             try {
-                let url = "";
-                if (apiKey) url = `/api/widget/init-by-key?key=${apiKey}`;
-                else if (tenantId) url = `/api/chatbots/tenants/${tenantId}/chatbot`;
+                let resolvedTenantId = tenantId;
 
-                const res = await fetch(url);
-                if (res.ok) {
-                    const data = await res.json();
-                    let chatbotData = data.id ? data : (data.branding || data);
-
-                    // Normalize field names if they come from the branding object (widget initialization API)
-                    if (chatbotData.brand_name && !chatbotData.name) {
-                        chatbotData.name = chatbotData.brand_name;
+                // Step 1: If we have an API key but no tenantId yet, fetch it
+                if (apiKey && !resolvedTenantId) {
+                    const initRes = await fetch(`/api/widget/init-by-key?key=${apiKey}`);
+                    if (initRes.ok) {
+                        const initData = await initRes.json();
+                        if (initData.tenant_id) {
+                            resolvedTenantId = initData.tenant_id;
+                            setTenantId(initData.tenant_id);
+                        }
                     }
+                }
 
-                    setSettings(chatbotData);
+                // Step 2: Fetch chatbot config using the tenantId
+                if (resolvedTenantId) {
+                    const res = await fetch(`/api/chatbots/tenants/${resolvedTenantId}/chatbot`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        let chatbotData = data.id ? data : (data.branding || data);
 
-                    // If we initialized by API key, we might get back the tenant_id
-                    if (apiKey && data.tenant_id && !tenantId) {
-                        setTenantId(data.tenant_id);
+                        if (chatbotData.brand_name && !chatbotData.name) {
+                            chatbotData.name = chatbotData.brand_name;
+                        }
+
+                        setSettings(chatbotData);
+
+                        setMessages(prev => {
+                            if (chatbotData.welcome_message && prev.length === 0) {
+                                return [{ role: "bot", content: chatbotData.welcome_message }];
+                            } else if (chatbotData.welcome_message && prev.length === 1 && prev[0].role === "bot") {
+                                return [{ role: "bot", content: chatbotData.welcome_message }];
+                            }
+                            return prev;
+                        });
+                    } else {
+                        setSettings(null);
                     }
+                } else if (apiKey) {
+                    // Fallback to init response if tenant resolution didn't yield a tenant ID
+                    const initRes = await fetch(`/api/widget/init-by-key?key=${apiKey}`);
+                    if (initRes.ok) {
+                        const data = await initRes.json();
+                        let chatbotData = data.id ? data : (data.branding || data);
+                        if (chatbotData.brand_name && !chatbotData.name) {
+                            chatbotData.name = chatbotData.brand_name;
+                        }
 
-                    if (chatbotData.welcome_message && messages.length === 0) {
-                        setMessages([{ role: "bot", content: chatbotData.welcome_message }]);
-                    }
-                    // Alternatively, if settings changed, update the welcome message if it was the only one
-                    else if (chatbotData.welcome_message && messages.length === 1 && messages[0].role === "bot") {
-                        setMessages([{ role: "bot", content: chatbotData.welcome_message }]);
+                        // Check if it really has chatbot data before setting
+                        if (chatbotData && (chatbotData.name || chatbotData.primary_color)) {
+                            setSettings(chatbotData);
+                            setMessages(prev => {
+                                if (chatbotData.welcome_message && prev.length === 0) {
+                                    return [{ role: "bot", content: chatbotData.welcome_message }];
+                                }
+                                return prev;
+                            });
+                        } else {
+                            setSettings(null);
+                        }
+                    } else {
+                        setSettings(null);
                     }
                 }
             } catch (error) {
                 console.error("Failed to fetch settings:", error);
+                setSettings(null);
             } finally {
                 setIsLoading(false);
             }
@@ -126,6 +165,49 @@ function PreviewEmbedContent() {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-[#0A0C12] text-slate-500">
                 <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+            </div>
+        );
+    }
+
+    if (!tenantId && !apiKey) {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0A0C12] text-slate-500 space-y-4">
+                <Bot className="w-16 h-16 opacity-50 text-indigo-500" />
+                <h3 className="text-xl font-bold text-white tracking-tight uppercase">Missing Credentials</h3>
+                <p className="max-w-md text-center text-sm opacity-80">
+                    Please provide a valid API key or Tenant ID to preview the chatbot.
+                </p>
+            </div>
+        );
+    }
+
+    if (!settings) {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center bg-[#0A0C12] text-slate-500 space-y-6 p-8">
+                <div className="relative">
+                    <div className="absolute -inset-4 bg-indigo-500/10 rounded-full blur-2xl animate-pulse" />
+                    <Bot className="w-16 h-16 text-indigo-400 relative z-10 opacity-60" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-white tracking-tight uppercase">Setting Up Your Bot</h3>
+                    <p className="max-w-sm text-center text-sm text-slate-400 leading-relaxed">
+                        Your chatbot configuration is being prepared. Please ensure your workspace has a bot configured in the Bot Config tab.
+                    </p>
+                </div>
+                <div className="flex flex-col gap-2 text-[11px] text-slate-500">
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/50 animate-pulse" />
+                        <span>Verifying API key connection</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/50 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                        <span>Loading workspace settings</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/50 animate-pulse" style={{ animationDelay: '0.6s' }} />
+                        <span>Initializing bot configuration</span>
+                    </div>
+                </div>
             </div>
         );
     }
