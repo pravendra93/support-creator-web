@@ -147,7 +147,7 @@ export default function BillingPage() {
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${billingCycle === "month"
                                 ? "bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]"
                                 : "text-gray-400 hover:text-white"
-                                }`}
+                                } cursor-pointer`}
                         >
                             Monthly
                         </button>
@@ -156,7 +156,7 @@ export default function BillingPage() {
                             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 relative ${billingCycle === "year"
                                 ? "bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]"
                                 : "text-gray-400 hover:text-white"
-                                }`}
+                                } cursor-pointer`}
                         >
                             Yearly
                             <span className="absolute -top-3 -right-2 bg-emerald-500 text-[9px] text-white px-2 py-0.5 rounded-full font-black animate-bounce">
