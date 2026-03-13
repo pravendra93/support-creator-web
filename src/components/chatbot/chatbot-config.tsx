@@ -248,13 +248,13 @@ export function ChatBotConfig({ tenantId, apiKey, onApiKeyChange, onSaveSuccess 
                 </CardFooter>
             </Card>
 
+{/* 
             <Card className="border-blue-100 bg-blue-50/50">
                 <CardHeader>
                     <CardTitle className="text-blue-900">Integration Code</CardTitle>
                     <CardDescription className="text-blue-700">Add this script to your website's header or footer to enable the chatbot.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4">
-                    {/* API Key Selector */}
                     <div className="grid gap-2">
                         <Label className="text-blue-900 font-medium">Select API Key</Label>
                         {isLoadingKeys ? (
@@ -305,7 +305,6 @@ export function ChatBotConfig({ tenantId, apiKey, onApiKeyChange, onSaveSuccess 
                         )}
                     </div>
 
-                    {/* Code Snippet */}
                     {selectedApiKey && (
                         <div className="relative">
                             <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-[11px] pr-12">
@@ -327,7 +326,8 @@ export function ChatBotConfig({ tenantId, apiKey, onApiKeyChange, onSaveSuccess 
                         </div>
                     )}
                 </CardContent>
-            </Card>
+            </Card> 
+            */}
         </div>
     );
 }

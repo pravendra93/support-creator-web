@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 import {
     Loader2, Sparkles, Layout, MessageSquare, Zap,
     ChevronDown, X, CheckCircle2, XCircle, AlertTriangle,
-    ArrowRight, Key, Bot, Settings, Play, Shield
+    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 import { ChatBotConfig } from "@/components/chatbot/chatbot-config";
 import { CreateApiKeyModal } from "@/components/api-keys/create-api-key-modal";
@@ -46,6 +47,7 @@ function PreviewBotContent() {
     const [tempApiKey, setTempApiKey] = useState("");
     const [refreshKey, setRefreshKey] = useState(0);
     const [activeTask, setActiveTask] = useState<"intro" | "config" | "voice">("intro");
+    const [isSnippetCopied, setIsSnippetCopied] = useState(false);
     const { user } = useAuth();
 
     // Smart workspace detection
@@ -57,6 +59,24 @@ function PreviewBotContent() {
     // API Key validation
     const [keyValidationState, setKeyValidationState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
     const [keyValidationMessage, setKeyValidationMessage] = useState("");
+
+    const getIntegrationSnippet = () => {
+        const widgetUrl =
+            process.env.NEXT_PUBLIC_WIDGET_URL ||
+            (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.host}/widget.js` : "http://localhost:3000/widget.js");
+
+        return `<script 
+  src="${widgetUrl}" 
+  data-api-key="${apiKey}"
+  async>
+</script>`;
+    };
+
+    const handleCopySnippet = () => {
+        navigator.clipboard.writeText(getIntegrationSnippet());
+        setIsSnippetCopied(true);
+        setTimeout(() => setIsSnippetCopied(false), 2000);
+    };
 
     // Check for API keys and open appropriate modal
     const handleApiKeyLinkClick = async () => {
@@ -693,66 +713,136 @@ function PreviewBotContent() {
                 {/* Left Panel: Tasks/Config Content */}
                 <div className="w-1/2 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar text-white">
                     {activeTask === "intro" && (
-                        <div className="bg-gradient-to-br from-[#13171F] to-[#0D1117] rounded-[32px] border border-white/5 p-10 flex flex-col relative shadow-2xl group min-h-full">
-                            <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-colors duration-700" />
-
-                            <div className="relative z-10 flex flex-col gap-8">
-                                <div className="space-y-6 text-white text-left">
-                                    <div className="inline-block px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
-                                        Getting Started
+                        <div className="min-h-full">
+                            {apiKey && selectedTenantId ? (
+                                <div className="space-y-8 animate-in fade-in duration-500">
+                                    <div className="space-y-4">
+                                        <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">
+                                            Bot Connected
+                                        </div>
+                                        <h2 className="text-4xl font-black mb-2 leading-[1.15] text-white">
+                                            Your Widget is <br />
+                                            <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Ready to Deploy.</span>
+                                        </h2>
+                                        <p className="text-slate-400 text-base leading-relaxed max-w-lg">
+                                            Ensure your API key is updated to enable widget functionality. Once configured, copy the integration snippet below and paste it into your website&apos;s header or footer to launch your AI assistant.
+                                        </p>
                                     </div>
-                                    <h2 className="text-4xl font-black mb-2 leading-[1.15] text-white">
-                                        Activate Your <br />
-                                        <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">AI Sandbox.</span>
-                                    </h2>
-                                    <p className="text-slate-400 text-base leading-relaxed max-w-lg">
-                                        To begin testing, you first need to provide an <button onClick={handleApiKeyLinkClick} className="text-indigo-400 font-bold border-b border-indigo-500/30 pb-0.5 hover:text-indigo-300 hover:border-indigo-400 transition-all cursor-pointer">API Key</button>. This key connects the simulator to your unique AI agent&apos;s logic and knowledge base.
-                                    </p>
-                                    <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
-                                        Once connected, head over to <span className="text-purple-400 font-bold">Bot Config</span> to fine-tune your widget&apos;s appearance, colors, and personality in real-time.
-                                    </p>
 
-                                    {!apiKey && (
-                                        <div className="pt-4">
-                                            <button
-                                                onClick={handleApiKeyLinkClick}
-                                                className="group/btn relative px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-500/20 flex items-center gap-2"
+                                    <div className="bg-[#13171F]/80 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 shadow-2xl relative group/snippet">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Production Snippet</span>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleCopySnippet}
+                                                className="h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all gap-2"
                                             >
-                                                Initialize with API Key
-                                                <Zap className="w-4 h-4 animate-pulse" />
-                                            </button>
+                                                {isSnippetCopied ? (
+                                                    <>
+                                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Copied</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Copy className="w-3.5 h-3.5" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest cursor-pointer">Copy Code</span>
+                                                    </>
+                                                )}
+                                            </Button>
                                         </div>
-                                    )}
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="group/item relative">
-                                        <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl opacity-0 group-hover/item:opacity-75 blur transition duration-500"></div>
-                                        <div className="relative flex flex-col gap-3 p-5 rounded-2xl bg-[#13171F] border border-white/5 group-hover/item:border-transparent transition-all">
-                                            <div className="w-8 h-8 flex items-center justify-center bg-indigo-500/20 rounded-lg group-hover/item:bg-indigo-500/30 transition-colors">
-                                                <Zap className="w-4 h-4 text-indigo-400 group-hover/item:text-indigo-300" />
+                                        <div className="relative group">
+                                            <div className="absolute -inset-2 bg-indigo-500/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <pre className="relative bg-black/40 text-indigo-300 p-6 rounded-2xl overflow-x-auto text-[13px] font-mono leading-relaxed border border-white/5 custom-scrollbar">
+                                                {getIntegrationSnippet()}
+                                            </pre>
+                                        </div>
+
+                                        <p className="text-[10px] text-slate-600 mt-4 flex items-center gap-2 justify-center">
+                                            <AlertTriangle className="w-3 h-3" />
+                                            Active API Key: {apiKey.slice(0, 8)}...{apiKey.slice(-4)}
+                                        </p>
+                                    </div>
+
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => setActiveTask("config")}
+                                            className="text-sm font-bold text-slate-500 hover:text-white transition-colors flex items-center gap-2 group/link"
+                                        >
+                                            Want to customize colors and personality?
+                                            <span className="text-indigo-400 flex items-center gap-1 group-hover/link:translate-x-1 transition-transform">
+                                                Go to Bot Config <ArrowRight className="w-3.5 h-3.5" />
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-gradient-to-br from-[#13171F] to-[#0D1117] rounded-[32px] border border-white/5 p-10 flex flex-col relative shadow-2xl group min-h-full">
+                                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-colors duration-700" />
+
+                                    <div className="relative z-10 flex flex-col gap-8">
+                                        <div className="space-y-6 text-white text-left">
+                                            <div className="inline-block px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
+                                                Getting Started
                                             </div>
-                                            <div>
-                                                <h4 className="font-bold text-slate-100 group-hover/item:text-white transition-colors text-left text-sm">Instant Preview</h4>
-                                                <p className="text-[11px] text-slate-400 leading-relaxed group-hover/item:text-slate-300 transition-colors text-left">Watch the widget update instantly as you change your configuration.</p>
+                                            <h2 className="text-4xl font-black mb-2 leading-[1.15] text-white">
+                                                Activate Your <br />
+                                                <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">AI Sandbox.</span>
+                                            </h2>
+                                            <p className="text-slate-400 text-base leading-relaxed max-w-lg">
+                                                To begin testing, you first need to provide an <button onClick={handleApiKeyLinkClick} className="text-indigo-400 font-bold border-b border-indigo-500/30 pb-0.5 hover:text-indigo-300 hover:border-indigo-400 transition-all cursor-pointer">API Key</button>. This key connects the simulator to your unique AI agent&apos;s logic and knowledge base.
+                                            </p>
+                                            <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
+                                                Once connected, head over to <span className="text-purple-400 font-bold">Bot Config</span> to fine-tune your widget&apos;s appearance, colors, and personality in real-time.
+                                            </p>
+
+                                            {!apiKey && (
+                                                <div className="pt-4">
+                                                    <button
+                                                        onClick={handleApiKeyLinkClick}
+                                                        className="group/btn relative px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-500/20 flex items-center gap-2"
+                                                    >
+                                                        Initialize with API Key
+                                                        <Zap className="w-4 h-4 animate-pulse" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="group/item relative">
+                                                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl opacity-0 group-hover/item:opacity-75 blur transition duration-500"></div>
+                                                <div className="relative flex flex-col gap-3 p-5 rounded-2xl bg-[#13171F] border border-white/5 group-hover/item:border-transparent transition-all">
+                                                    <div className="w-8 h-8 flex items-center justify-center bg-indigo-500/20 rounded-lg group-hover/item:bg-indigo-500/30 transition-colors">
+                                                        <Zap className="w-4 h-4 text-indigo-400 group-hover/item:text-indigo-300" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-100 group-hover/item:text-white transition-colors text-left text-sm">Instant Preview</h4>
+                                                        <p className="text-[11px] text-slate-400 leading-relaxed group-hover/item:text-slate-300 transition-colors text-left">Watch the widget update instantly as you change your configuration.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="group/item relative">
+                                                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl opacity-0 group-hover/item:opacity-75 blur transition duration-500"></div>
+                                                <div className="relative flex flex-col gap-3 p-5 rounded-2xl bg-[#13171F] border border-white/5 group-hover/item:border-transparent transition-all shadow-xl">
+                                                    <div className="w-8 h-8 flex items-center justify-center bg-purple-500/20 rounded-lg group-hover/item:bg-purple-500/30 transition-colors">
+                                                        <Layout className="w-4 h-4 text-purple-400 group-hover/item:text-purple-300" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-100 group-hover/item:text-white transition-colors text-left text-sm">Adaptive Config</h4>
+                                                        <p className="text-[11px] text-slate-400 leading-relaxed group-hover/item:text-slate-300 transition-colors text-left">Toggle through layout styles and AI personality settings on the fly.</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div className="group/item relative">
-                                        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl opacity-0 group-hover/item:opacity-75 blur transition duration-500"></div>
-                                        <div className="relative flex flex-col gap-3 p-5 rounded-2xl bg-[#13171F] border border-white/5 group-hover/item:border-transparent transition-all shadow-xl">
-                                            <div className="w-8 h-8 flex items-center justify-center bg-purple-500/20 rounded-lg group-hover/item:bg-purple-500/30 transition-colors">
-                                                <Layout className="w-4 h-4 text-purple-400 group-hover/item:text-purple-300" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-slate-100 group-hover/item:text-white transition-colors text-left text-sm">Adaptive Config</h4>
-                                                <p className="text-[11px] text-slate-400 leading-relaxed group-hover/item:text-slate-300 transition-colors text-left">Toggle through layout styles and AI personality settings on the fly.</p>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
