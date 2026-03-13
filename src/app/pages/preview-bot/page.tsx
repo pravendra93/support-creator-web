@@ -250,66 +250,48 @@ function PreviewBotContent() {
                 const savedKey = localStorage.getItem("simulator_api_key");
                 const lastWorkspace = localStorage.getItem("simulator_last_workspace");
 
-                // If we have a saved key, use it
-                if (savedKey) {
-                    // Set tenant first so validation has a fallback
-                    let resolvedTenant = null;
-                    if (lastWorkspace && tenantsList.some(t => t.id === lastWorkspace)) {
-                        resolvedTenant = lastWorkspace;
+                // Determine which workspace to select
+                let wsToSelect: WorkspaceReadiness | null = null;
+                let shouldShowSelector = false;
+
+                if (lastWorkspace) {
+                    const lastWs = readinessChecks.find(w => w.tenant.id === lastWorkspace);
+                    if (lastWs && lastWs.status !== "not_setup") {
+                        wsToSelect = lastWs;
+                    } else if (lastWs && readinessChecks.length === 1) {
+                        wsToSelect = lastWs;
                     } else if (readyWorkspaces.length > 0) {
-                        resolvedTenant = readyWorkspaces[0].tenant.id;
-                    } else if (tenantsList.length > 0) {
-                        resolvedTenant = tenantsList[0].id;
+                        // Fallback to first ready
+                        wsToSelect = readyWorkspaces[0];
+                    } else {
+                        wsToSelect = lastWs || null; // Still select it even if not setup, so user can onboard
                     }
-                    if (resolvedTenant) {
-                        setSelectedTenantId(resolvedTenant);
-                    }
-                    setApiKey(savedKey);
-                    setTempApiKey(savedKey);
-                    // Skip useEffect validation — mark as valid immediately since we have a workspace
-                    if (resolvedTenant) {
+                } else if (readyWorkspaces.length === 1) {
+                    wsToSelect = readyWorkspaces[0];
+                } else if (readyWorkspaces.length > 1) {
+                    shouldShowSelector = true;
+                } else if (tenantsList.length > 0) {
+                    wsToSelect = readinessChecks[0];
+                }
+
+                if (shouldShowSelector) {
+                    setShowWorkspaceSelector(true);
+                } else if (wsToSelect) {
+                    setSelectedTenantId(wsToSelect.tenant.id);
+                    if (wsToSelect.apiKey) {
+                        updateApiKey(wsToSelect.apiKey);
+                        setTempApiKey(wsToSelect.apiKey);
                         setKeyValidationState("valid");
                         setKeyValidationMessage("API Key Connected");
-                    }
-                }
-                // Scenario A: One workspace ready → auto-select
-                else if (readyWorkspaces.length === 1) {
-                    const ws = readyWorkspaces[0];
-                    setSelectedTenantId(ws.tenant.id);
-                    if (ws.apiKey) {
-                        updateApiKey(ws.apiKey);
-                        setTempApiKey(ws.apiKey);
-                        setKeyValidationState("valid");
-                        setKeyValidationMessage("API Key Connected Successfully");
+                    } else {
+                        // Clear any old override if this workspace has no key
+                        updateApiKey("");
+                        setTempApiKey("");
+                        setKeyValidationState("idle");
+                        setKeyValidationMessage("");
                     }
                     setIsAutoSelected(true);
-                    localStorage.setItem("simulator_last_workspace", ws.tenant.id);
-                }
-                // Scenario B: Multiple ready → check last used, or show selector
-                else if (readyWorkspaces.length > 1) {
-                    if (lastWorkspace) {
-                        const lastWs = readyWorkspaces.find(w => w.tenant.id === lastWorkspace);
-                        if (lastWs) {
-                            setSelectedTenantId(lastWs.tenant.id);
-                            if (lastWs.apiKey) {
-                                updateApiKey(lastWs.apiKey);
-                                setTempApiKey(lastWs.apiKey);
-                                setKeyValidationState("valid");
-                                setKeyValidationMessage("API Key Connected Successfully");
-                            }
-                            setIsAutoSelected(true);
-                        } else {
-                            setShowWorkspaceSelector(true);
-                        }
-                    } else {
-                        setShowWorkspaceSelector(true);
-                    }
-                }
-                // Scenario C: None ready → will show onboarding
-                else {
-                    if (tenantsList.length > 0) {
-                        setSelectedTenantId(tenantsList[0].id);
-                    }
+                    localStorage.setItem("simulator_last_workspace", wsToSelect.tenant.id);
                 }
             } catch (error) {
                 console.error("Failed workspace readiness check", error);
@@ -881,7 +863,7 @@ function PreviewBotContent() {
                     )}
 
                     {activeTask === "voice" && (
-                        <div className="bg-gradient-to-br from-[#13171F] to-[#0D1117] rounded-[32px] border border-white/5 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-2xl h-full">
+                        <div className="bg-gradient-to-br from-[#13171F] to-[#0D1117] rounded-[32px] border border-white/5 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-2xl flex-1 min-h-[400px]">
                             <div className="absolute inset-0 bg-indigo-500/5 pointer-events-none"></div>
                             <div className="bg-indigo-500/10 p-8 rounded-full mb-8 relative">
                                 <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping opacity-20"></div>
@@ -914,84 +896,86 @@ function PreviewBotContent() {
 
                     {/* Scenario C: No workspace ready — Guided Onboarding, NOT "Chatbot Not Found" */}
                     {!apiKey ? (
-                        <div className="absolute inset-0 top-8 flex flex-col items-center justify-center bg-[#0D1117] z-30 p-12 text-center">
-                            <div className="relative mb-8">
-                                <div className="absolute -inset-6 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
-                                <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center">
-                                    <Bot className="w-10 h-10 text-indigo-400" />
+                        <div className="absolute inset-0 top-8 bg-[#0D1117] z-30 overflow-y-auto custom-scrollbar">
+                            <div className="flex flex-col items-center justify-center min-h-full p-8 sm:p-12 text-center pb-20">
+                                <div className="relative mb-8">
+                                    <div className="absolute -inset-6 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
+                                    <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center">
+                                        <Bot className="w-10 h-10 text-indigo-400" />
+                                    </div>
                                 </div>
+
+                                <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">
+                                    {readyCount === 0 ? "No Active AI Sandbox Found" : "Simulator Offline"}
+                                </h3>
+
+                                {readyCount === 0 ? (
+                                    <div className="space-y-6 max-w-[280px]">
+                                        <p className="text-slate-500 text-sm leading-relaxed">
+                                            Complete these steps to launch your bot preview:
+                                        </p>
+
+                                        {/* Guided Steps */}
+                                        <div className="space-y-3 text-left">
+                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                                                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                                    <span className="text-[10px] font-black text-indigo-400">1</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-white">Add API Key</span>
+                                                    <p className="text-[10px] text-slate-500">Connect your workspace to the simulator</p>
+                                                </div>
+                                                {workspaceReadiness.some(w => w.hasApiKey)
+                                                    ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
+                                                    : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
+                                                }
+                                            </div>
+                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                                                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                                    <span className="text-[10px] font-black text-indigo-400">2</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-white">Configure Bot</span>
+                                                    <p className="text-[10px] text-slate-500">Set up appearance and behavior</p>
+                                                </div>
+                                                {workspaceReadiness.some(w => w.hasBotConfig)
+                                                    ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
+                                                    : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
+                                                }
+                                            </div>
+                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                                                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                                    <span className="text-[10px] font-black text-indigo-400">3</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-white">Start Preview</span>
+                                                    <p className="text-[10px] text-slate-500">Watch your bot come alive</p>
+                                                </div>
+                                                <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={handleApiKeyLinkClick}
+                                            className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
+                                        >
+                                            <Key className="w-4 h-4" />
+                                            Connect API Key
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <p className="text-slate-400 text-sm max-w-[240px] leading-relaxed">
+                                            Enter your <span className="text-indigo-400 font-bold">API Key</span> at the top right to initialize the live preview.
+                                        </p>
+                                        <div className="mt-4 flex gap-2 justify-center">
+                                            <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse"></div>
+                                            <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-75"></div>
+                                            <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-150"></div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-
-                            <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">
-                                {readyCount === 0 ? "No Active AI Sandbox Found" : "Simulator Offline"}
-                            </h3>
-
-                            {readyCount === 0 ? (
-                                <div className="space-y-6 max-w-[280px]">
-                                    <p className="text-slate-500 text-sm leading-relaxed">
-                                        Complete these steps to launch your bot preview:
-                                    </p>
-
-                                    {/* Guided Steps */}
-                                    <div className="space-y-3 text-left">
-                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                                            <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                                <span className="text-[10px] font-black text-indigo-400">1</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-xs font-bold text-white">Add API Key</span>
-                                                <p className="text-[10px] text-slate-500">Connect your workspace to the simulator</p>
-                                            </div>
-                                            {workspaceReadiness.some(w => w.hasApiKey)
-                                                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
-                                                : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
-                                            }
-                                        </div>
-                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                                            <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                                <span className="text-[10px] font-black text-indigo-400">2</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-xs font-bold text-white">Configure Bot</span>
-                                                <p className="text-[10px] text-slate-500">Set up appearance and behavior</p>
-                                            </div>
-                                            {workspaceReadiness.some(w => w.hasBotConfig)
-                                                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
-                                                : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
-                                            }
-                                        </div>
-                                        <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                                            <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                                <span className="text-[10px] font-black text-indigo-400">3</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-xs font-bold text-white">Start Preview</span>
-                                                <p className="text-[10px] text-slate-500">Watch your bot come alive</p>
-                                            </div>
-                                            <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={handleApiKeyLinkClick}
-                                        className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
-                                    >
-                                        <Key className="w-4 h-4" />
-                                        Connect API Key
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <p className="text-slate-400 text-sm max-w-[240px] leading-relaxed">
-                                        Enter your <span className="text-indigo-400 font-bold">API Key</span> at the top right to initialize the live preview.
-                                    </p>
-                                    <div className="mt-4 flex gap-2 justify-center">
-                                        <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse"></div>
-                                        <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-75"></div>
-                                        <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-150"></div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     ) : keyValidationState === "validating" ? (
                         <div className="absolute inset-0 top-8 flex items-center justify-center bg-[#0D1117] z-30">

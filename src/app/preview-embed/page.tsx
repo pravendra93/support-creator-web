@@ -335,32 +335,46 @@ function PreviewEmbedContent() {
                     </div>
                 ) : (
                     /* Minimized Hub Content */
-                    <div className="flex-1 flex flex-col items-center justify-center gap-10 animate-in fade-in zoom-in duration-700 px-12 text-center">
-                        <div className="relative group cursor-pointer" onClick={() => setIsChatOpen(true)}>
-                            <div className="absolute -inset-4 rounded-full blur-3xl animate-pulse scale-150 transition-all duration-700 group-hover:opacity-80" style={{ backgroundColor: `${primaryColor}40` }}></div>
-                            <div className="relative w-32 h-32 rounded-[40px] flex items-center justify-center shadow-3xl group-hover:scale-105 group-hover:rotate-12 transition-all duration-500 border-2 border-white/20" style={{ background: `linear-gradient(135deg, ${primaryColor}, #4f46e5)` }}>
+                    <div className="flex-1 flex flex-col items-center justify-center gap-8 animate-in fade-in zoom-in duration-700 px-8 sm:px-12 text-center pb-28 pt-8 relative">
+                        {/* Decorative Background Elements */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.02)_0%,transparent_70%)] pointer-events-none" />
+
+                        {/* Status Badge */}
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 shadow-xl backdrop-blur-md mb-2">
+                            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primaryColor, boxShadow: `0 0 10px ${primaryColor}` }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">System Ready</span>
+                        </div>
+
+                        <div className="relative group cursor-pointer z-10" onClick={() => setIsChatOpen(true)}>
+                            <div className="absolute -inset-8 rounded-full blur-[50px] animate-pulse scale-110 transition-all duration-1000 group-hover:opacity-100 opacity-60" style={{ backgroundColor: `${primaryColor}30` }}></div>
+                            <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[32px] flex items-center justify-center shadow-2xl group-hover:scale-[1.03] transition-all duration-500 border border-white/20 overflow-hidden"
+                                style={{ background: `linear-gradient(135deg, ${primaryColor}, #1e1e2e)` }}>
+                                <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent pointer-events-none" />
                                 {settings?.logo_url ? (
-                                    <img src={settings.logo_url} alt="Logo" className="w-20 h-20 object-contain" />
+                                    <img src={settings.logo_url} alt="Logo" className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-2xl z-10" />
                                 ) : (
-                                    <MessageSquare className="w-14 h-14 text-white" />
+                                    <MessageSquare className="w-12 h-12 sm:w-14 sm:h-14 text-white drop-shadow-2xl z-10" />
                                 )}
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <h3 className="text-4xl font-black text-white tracking-tight leading-none uppercase">Simulator Hub</h3>
-                            <p className="text-slate-500 max-w-sm text-lg font-medium leading-relaxed italic">
-                                Ready to initialize <span className="text-xl not-italic" style={{ color: primaryColor }}>{settings?.name || "Support Assistant"}</span>'s brain protocol.
+                        <div className="space-y-5 bg-[#13171f]/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/5 shadow-2xl relative z-10 w-full max-w-md mx-auto mt-4">
+                            <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none">
+                                Simulator <span className="text-transparent bg-clip-text" style={{ backgroundImage: `linear-gradient(135deg, ${primaryColor}, #a855f7)` }}>Hub</span>
+                            </h3>
+                            <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+                                Ready to initialize <strong className="font-bold text-white tracking-wide">{settings?.name || "Support Assistant"}</strong>'s brain protocol.
                             </p>
-                        </div>
 
-                        <button
-                            onClick={() => setIsChatOpen(true)}
-                            className="px-12 py-4 text-white rounded-2xl font-black shadow-3xl transition-all hover:scale-[1.05] active:scale-[0.95] uppercase tracking-[0.3em] text-xs border border-white/10 cursor-pointer"
-                            style={{ backgroundColor: primaryColor, boxShadow: `0 15px 35px -5px ${primaryColor}60` }}
-                        >
-                            Establish Connection
-                        </button>
+                            <button
+                                onClick={() => setIsChatOpen(true)}
+                                className="w-full py-4 text-white rounded-2xl font-black shadow-lg transition-all hover:translate-y-[-2px] active:translate-y-[1px] uppercase tracking-widest text-xs border border-white/10 flex items-center justify-center gap-2 group/btn"
+                                style={{ backgroundColor: primaryColor, boxShadow: `0 10px 30px -10px ${primaryColor}` }}
+                            >
+                                <Sparkles className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                                Establish Connection
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
