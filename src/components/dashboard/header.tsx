@@ -100,7 +100,7 @@ export function Header() {
                     <DropdownMenuItem onClick={() => {
                         trackCtaClicked("Dashboard: Logout");
                         logout();
-                    }}>Logout</DropdownMenuItem>
+                    }} className="cursor-pointer">Logout</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         </header>
