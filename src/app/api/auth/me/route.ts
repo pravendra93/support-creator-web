@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { cookies } from "next/headers";
 
 import { BACKEND_URL } from "@/lib/config";
+
+const BACKEND_TIMEOUT_MS = 10_000; // 10 seconds
 
 export async function GET(request: Request) {
     try {
@@ -13,13 +14,31 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
 
-        const response = await fetch(`${BACKEND_URL}/v1/auth/me`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token.value}`,
-            },
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
+
+        let response: Response;
+        try {
+            response = await fetch(`${BACKEND_URL}/v1/auth/me`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token.value}`,
+                },
+                signal: controller.signal,
+            });
+        } catch (err: any) {
+            if (err?.name === "AbortError") {
+                console.error("Me proxy: backend request timed out after", BACKEND_TIMEOUT_MS, "ms");
+                return NextResponse.json(
+                    { message: "Session verification timed out. Please log in again." },
+                    { status: 401 }
+                );
+            }
+            throw err;
+        } finally {
+            clearTimeout(timeout);
+        }
 
         // Check if response is JSON
         const contentType = response.headers.get("content-type");
@@ -62,14 +81,32 @@ export async function PUT(request: Request) {
 
         const body = await request.json();
 
-        const response = await fetch(`${BACKEND_URL}/v1/auth/me`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token.value}`,
-            },
-            body: JSON.stringify(body),
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
+
+        let response: Response;
+        try {
+            response = await fetch(`${BACKEND_URL}/v1/auth/me`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token.value}`,
+                },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+        } catch (err: any) {
+            if (err?.name === "AbortError") {
+                console.error("Update Me proxy: backend request timed out after", BACKEND_TIMEOUT_MS, "ms");
+                return NextResponse.json(
+                    { message: "Request timed out. Please try again." },
+                    { status: 408 }
+                );
+            }
+            throw err;
+        } finally {
+            clearTimeout(timeout);
+        }
 
         const data = await response.json();
 

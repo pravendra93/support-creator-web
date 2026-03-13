@@ -21,6 +21,7 @@ import { formatCurrency } from "@/lib/use-geo-detect";
 interface RazorpayPaymentModalProps {
     plan: Plan;
     isIndia: boolean;
+    billingCycle: "month" | "year";
     onClose: () => void;
     onSuccess: (paymentId: string) => void;
 }
@@ -46,6 +47,7 @@ function loadRazorpayScript(): Promise<boolean> {
 export function RazorpayPaymentModal({
     plan,
     isIndia,
+    billingCycle,
     onClose,
     onSuccess,
 }: RazorpayPaymentModalProps) {
@@ -82,6 +84,7 @@ export function RazorpayPaymentModal({
                 body: JSON.stringify({
                     planId: plan.id,
                     currency: priceInfo.currency,
+                    billingCycle,
                 }),
             });
 

@@ -2,17 +2,37 @@ import { NextResponse } from "next/server";
 
 import { BACKEND_URL } from "@/lib/config";
 
+const BACKEND_TIMEOUT_MS = 15_000; // 15 seconds
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        const response = await fetch(`${BACKEND_URL}/v1/auth/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
+
+        let response: Response;
+        try {
+            response = await fetch(`${BACKEND_URL}/v1/auth/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+        } catch (err: any) {
+            if (err?.name === "AbortError") {
+                console.error("Login proxy: backend request timed out after", BACKEND_TIMEOUT_MS, "ms");
+                return NextResponse.json(
+                    { message: "Server is not responding. Please try again in a moment." },
+                    { status: 504 }
+                );
+            }
+            throw err;
+        } finally {
+            clearTimeout(timeout);
+        }
 
         const data = await response.json();
 

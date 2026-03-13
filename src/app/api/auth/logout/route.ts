@@ -9,14 +9,22 @@ export async function POST(request: Request) {
         const token = cookieStore.get("session_token");
 
         if (token) {
-            // Call backend to revoke token
-            await fetch(`${BACKEND_URL}/v1/auth/revoke-token`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token.value}`,
-                },
-            });
+            // Try to revoke token on backend (best-effort, don't block logout)
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 5_000);
+                await fetch(`${BACKEND_URL}/v1/auth/revoke-token`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token.value}`,
+                    },
+                    signal: controller.signal,
+                });
+                clearTimeout(timeout);
+            } catch {
+                // Ignore — token revocation is best-effort, cookie will be cleared regardless
+            }
         }
 
         const res = NextResponse.json({ message: "Logged out successfully" }, { status: 200 });
