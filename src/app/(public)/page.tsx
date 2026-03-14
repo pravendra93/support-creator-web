@@ -1,3 +1,4 @@
+import Script from "next/script";
 import Hero from "@/components/landing/hero";
 import TrustSection from "@/components/landing/trust-section";
 import HowItWorks from "@/components/landing/how-it-works";
@@ -27,6 +28,11 @@ export default async function Home() {
 
     return (
         <>
+            <Script
+                src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js"
+                data-api-key="sk_live_0CB_E4vbs9mpCRsfA19lBctmuy8Aj2hD"
+                strategy="afterInteractive"
+            />
             <Hero />
             <TrustSection />
             <HowItWorks />
