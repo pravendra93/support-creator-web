@@ -6,6 +6,7 @@ import { AuthProvider } from "@/context/auth-context";
 
 import { Toaster } from "@/components/ui/toaster";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import ChatWidget from "@/components/shared/chat-widget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({
           {children}
           <Toaster />
           <GoogleAnalytics />
+          <ChatWidget />
         </AuthProvider>
       </body>
     </html>
