@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { planId, currency } = body;
+        const { planId, currency, billingCycle } = body;
 
         if (!planId) {
             return NextResponse.json({ message: "Plan ID is required" }, { status: 400 });
@@ -41,17 +41,46 @@ export async function POST(request: Request) {
         const plan = await planRes.json();
         let razorpayPlanId = plan.razorpay_plan_id;
 
+        // Determine the correct amount in the target currency's smallest unit
+        const USD_TO_INR_RATE = 84; // Must match the rate in use-geo-detect.ts
+        const planCurrencyUpper = (plan.currency || "USD").toUpperCase();
+        const paymentCurrency = (currency || plan.currency || "USD").toUpperCase();
+
+        let amountInSmallestUnit = plan.price_cents; // default: plan's native price_cents
+
+        // Convert USD cents → INR paise if paying in INR but plan is in USD
+        if (paymentCurrency === "INR" && planCurrencyUpper === "USD") {
+            amountInSmallestUnit = Math.round(plan.price_cents * USD_TO_INR_RATE);
+        }
+
+        // Apply yearly billing: monthly × 12 × 0.8 (20% discount)
+        let razorpayPeriod = plan.interval === "month" ? "monthly" : (plan.interval === "year" ? "yearly" : "monthly");
+        let razorpayIntervalCount = plan.interval_count || 1;
+
+        if (billingCycle === "year" && plan.interval === "month") {
+            // Yearly price = monthly amount × 12 × 0.8
+            amountInSmallestUnit = Math.round(amountInSmallestUnit * 12 * 0.8);
+            razorpayPeriod = "yearly";
+            razorpayIntervalCount = 1;
+        }
+
+        console.log("📍 [PRICING] Plan price_cents:", plan.price_cents, "currency:", planCurrencyUpper,
+            "→ payment currency:", paymentCurrency, "billingCycle:", billingCycle,
+            "→ Razorpay amount:", amountInSmallestUnit);
+
         const authHeader = `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`;
 
-        // 2. If razorpay_plan_id is null, create Razorpay Plan
-        if (!razorpayPlanId) {
+        // 2. Always create a new Razorpay Plan for each subscription request.
+        // Razorpay plans are immutable, so a previously cached plan may have a
+        // different amount (e.g. wrong currency conversion or billing cycle).
+        {
             const rzpPlanPayload = {
-                period: plan.interval === "month" ? "monthly" : (plan.interval === "year" ? "yearly" : "monthly"),
-                interval: plan.interval_count || 1,
+                period: razorpayPeriod,
+                interval: razorpayIntervalCount,
                 item: {
                     name: `${plan.name} Plan`,
-                    amount: plan.price_cents,
-                    currency: currency || plan.currency,
+                    amount: amountInSmallestUnit,
+                    currency: paymentCurrency,
                     description: `${plan.name} Subscription`
                 }
             };
@@ -74,22 +103,13 @@ export async function POST(request: Request) {
             const rzpPlan = await rzpPlanRes.json();
             console.log("📍 [RAZORPAY POST /v1/plans] Response:", JSON.stringify(rzpPlan, null, 2));
             razorpayPlanId = rzpPlan.id;
-
-            // Save razorpay_plan_id to DB
-            await fetch(`${BACKEND_URL}/v1/plans/${planId}/razorpay-plan`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${sessionToken.value}`,
-                },
-                body: JSON.stringify({ razorpay_plan_id: razorpayPlanId }),
-            });
         }
 
         // 3. Create Subscription
+        const totalCount = razorpayPeriod === "yearly" ? 10 : 120; // 10 years of yearly or monthly
         const subPayload = {
             plan_id: razorpayPlanId,
-            total_count: 120, // Example: 10 years of monthly
+            total_count: totalCount,
             quantity: 1,
             customer_notify: 1,
             notes: {
