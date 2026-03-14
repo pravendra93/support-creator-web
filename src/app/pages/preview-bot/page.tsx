@@ -383,7 +383,7 @@ function PreviewBotContent() {
                         <div className="absolute top-0 right-0 p-6 z-10">
                             <button
                                 onClick={() => setShowWorkspaceSelector(false)}
-                                className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors"
+                                className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -591,7 +591,7 @@ function PreviewBotContent() {
                         <div className="absolute top-0 right-0 p-6">
                             <button
                                 onClick={() => setIsKeyModalOpen(false)}
-                                className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors"
+                                className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -635,13 +635,13 @@ function PreviewBotContent() {
                                         updateApiKey(tempApiKey);
                                         setIsKeyModalOpen(false);
                                     }}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl py-4 font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20"
+                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl py-4 font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 cursor-pointer"
                                 >
                                     Synchronize Agent
                                 </button>
                                 <button
                                     onClick={() => setIsKeyModalOpen(false)}
-                                    className="w-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-2xl py-4 font-bold text-sm transition-all"
+                                    className="w-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-2xl py-4 font-bold text-sm transition-all cursor-pointer"
                                 >
                                     Dismiss
                                 </button>
