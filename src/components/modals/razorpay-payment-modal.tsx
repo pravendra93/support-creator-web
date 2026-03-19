@@ -22,6 +22,7 @@ interface RazorpayPaymentModalProps {
     plan: Plan;
     isIndia: boolean;
     billingCycle: "month" | "year";
+    currentPlanPriceCents?: number;
     onClose: () => void;
     onSuccess: (paymentId: string) => void;
 }
@@ -48,6 +49,7 @@ export function RazorpayPaymentModal({
     plan,
     isIndia,
     billingCycle,
+    currentPlanPriceCents = 0,
     onClose,
     onSuccess,
 }: RazorpayPaymentModalProps) {
@@ -55,8 +57,14 @@ export function RazorpayPaymentModal({
     const [errorMsg, setErrorMsg] = useState("");
     const overlayRef = useRef<HTMLDivElement>(null);
 
-    // Resolve display currency based on geo
-    const priceInfo = formatCurrency(plan.price_cents, plan.currency, isIndia);
+    // Calculate deduction if upgrading
+    const deductionCents = plan.price_cents > currentPlanPriceCents ? currentPlanPriceCents : 0;
+    const finalAmountPriceCents = plan.price_cents - deductionCents;
+
+    // Resolve display currency based on geo (using final amount vs raw amount)
+    const priceInfo = formatCurrency(finalAmountPriceCents, plan.currency, isIndia);
+    const originalPriceInfo = formatCurrency(plan.price_cents, plan.currency, isIndia);
+    const deductionInfo = formatCurrency(deductionCents, plan.currency, isIndia);
 
     // Close on backdrop click
     const handleBackdropClick = (e: React.MouseEvent) => {
@@ -85,6 +93,7 @@ export function RazorpayPaymentModal({
                     planId: plan.id,
                     currency: priceInfo.currency,
                     billingCycle,
+                    deductionCents,
                 }),
             });
 
@@ -241,7 +250,7 @@ export function RazorpayPaymentModal({
                             >
                                 <div className="flex items-start justify-between">
                                     <div>
-                                        <p className="text-gray-400 text-sm">Total Amount</p>
+                                        <p className="text-gray-400 text-sm">Total Amount Due Today</p>
                                         <div className="flex items-baseline gap-1 mt-1">
                                             <span className="text-3xl font-extrabold text-white">
                                                 {priceInfo.display}
@@ -250,6 +259,12 @@ export function RazorpayPaymentModal({
                                                 /{plan.interval === "one_time" ? "once" : plan.interval}
                                             </span>
                                         </div>
+                                        {deductionCents > 0 && (
+                                            <div className="mt-2 text-xs">
+                                                <p className="text-gray-400 line-through">Original: {originalPriceInfo.display}</p>
+                                                <p className="text-emerald-400 font-bold">- {deductionInfo.display} (Current Plan Credit)</p>
+                                            </div>
+                                        )}
                                         {priceInfo.converted && (
                                             <p className="text-yellow-400/70 text-xs mt-1">
                                                 ≈ Converted from {plan.currency.toUpperCase()} for Indian payments
