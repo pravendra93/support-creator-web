@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { planId, currency, billingCycle } = body;
+        const { planId, currency, billingCycle, deductionCents = 0 } = body;
 
         if (!planId) {
             return NextResponse.json({ message: "Plan ID is required" }, { status: 400 });
@@ -51,6 +51,13 @@ export async function POST(request: Request) {
         // Convert USD cents → INR paise if paying in INR but plan is in USD
         if (paymentCurrency === "INR" && planCurrencyUpper === "USD") {
             amountInSmallestUnit = Math.round(plan.price_cents * USD_TO_INR_RATE);
+            if (deductionCents > 0) {
+                amountInSmallestUnit -= Math.round(deductionCents * USD_TO_INR_RATE);
+            }
+        } else {
+            if (deductionCents > 0) {
+                amountInSmallestUnit -= deductionCents;
+            }
         }
 
         // Apply yearly billing: monthly × 12 × 0.8 (20% discount)
@@ -63,6 +70,9 @@ export async function POST(request: Request) {
             razorpayPeriod = "yearly";
             razorpayIntervalCount = 1;
         }
+
+        // Clamp to 100 (which is 1 unit of currency) to prevent Razorpay Plan creation API from failing on 0 or negative amounts
+        if (amountInSmallestUnit < 100) amountInSmallestUnit = 100;
 
         console.log("📍 [PRICING] Plan price_cents:", plan.price_cents, "currency:", planCurrencyUpper,
             "→ payment currency:", paymentCurrency, "billingCycle:", billingCycle,

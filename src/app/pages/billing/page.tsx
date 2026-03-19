@@ -47,9 +47,17 @@ export default function BillingPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+    const [pendingPlan, setPendingPlan] = useState<Plan | null>(null);
     const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
     const [activePlanId, setActivePlanId] = useState<string | null>(null);
     const [billingCycle, setBillingCycle] = useState<"month" | "year">("month");
+
+    // Compute active plan price dynamically
+    const activePlanPriceCents = React.useMemo(() => {
+        if (!user?.plan_slug || plans.length === 0) return 0;
+        const current = plans.find(p => p.slug === user.plan_slug);
+        return current ? current.price_cents : 0;
+    }, [user?.plan_slug, plans]);
 
     useEffect(() => {
         fetchPlans();
@@ -241,26 +249,36 @@ export default function BillingPage() {
                         const Icon = meta.icon;
                         const isActive = plan.id === activePlanId;
                         const isMain = i === 1; // Middle card
+                        const isPending = pendingPlan?.id === plan.id;
 
                         return (
                             <div
                                 key={plan.id}
-                                className={`group relative flex flex-col rounded-[2.5rem] p-8 transition-all duration-500 ${isMain ? 'ring-2 ring-indigo-500/50 shadow-[0_0_50px_rgba(99,102,241,0.2)]' : 'hover:scale-[1.02]'
-                                    }`}
+                                onClick={() => !isActive && setPendingPlan(plan)}
+                                className={`group relative flex flex-col rounded-[2.5rem] p-8 transition-all duration-300 cursor-pointer border-2 ${isPending
+                                    ? "border-indigo-500 shadow-[0_0_40px_rgba(99,102,241,0.3)] scale-[1.02] z-20"
+                                    : isMain
+                                        ? "border-indigo-500/30 shadow-[0_0_50px_rgba(99,102,241,0.1)] hover:border-indigo-500/50 hover:scale-[1.01]"
+                                        : "border-white/5 hover:border-white/20 hover:scale-[1.01]"
+                                    } ${isActive ? "opacity-75 cursor-default hover:scale-100" : ""}`}
                                 style={{
                                     background: isMain
                                         ? "linear-gradient(145deg, #111122 0%, #1a1a35 100%)"
                                         : "linear-gradient(145deg, #0a0a12 0%, #111122 100%)",
-                                    border: isMain ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.05)",
                                 }}
                             >
                                 {/* Glow Effect on Hover */}
                                 <div className="absolute inset-0 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                                     style={{ boxShadow: `inset 0 0 40px ${meta.color}15` }} />
 
-                                {isMain && (
+                                {isMain && !isPending && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg z-20">
                                         Most Popular
+                                    </div>
+                                )}
+                                {isPending && (
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg z-20 animate-in fade-in zoom-in">
+                                        Selected
                                     </div>
                                 )}
 
@@ -389,22 +407,29 @@ export default function BillingPage() {
                                     </div>
 
                                     <button
-                                        onClick={() => setSelectedPlan(plan)}
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // prevent card click from un-selecting
+                                            setSelectedPlan(plan);
+                                        }}
                                         disabled={isActive}
                                         className={`group/btn relative w-full py-4 rounded-2xl font-black text-sm transition-all duration-300 overflow-hidden ${isActive
                                             ? "bg-white/5 text-gray-500 cursor-not-allowed border border-white/5"
-                                            : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-xl hover:shadow-indigo-500/20"
+                                            : isPending
+                                                ? "bg-emerald-500 text-white hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]"
+                                                : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-xl hover:shadow-indigo-500/20"
                                             }`}
                                     >
                                         <span className="relative z-10 flex items-center justify-center gap-2">
                                             {isActive ? (
                                                 <><CheckCircle2 className="h-4 w-4" /> Current Plan</>
+                                            ) : isPending ? (
+                                                <>Checkout Selected Plan <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
                                             ) : (plan.slug.toLowerCase().includes('trial') || plan.slug.toLowerCase().includes('free') || (plan.trial_days > 0 && plan.interval === 'one_time')) ? (
                                                 <>Start Free Trial <Gift className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
                                             ) : user?.is_subscribed ? (
-                                                <>Upgrade Plan <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
+                                                <>Select to Upgrade <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
                                             ) : (
-                                                <>Get This Plan <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
+                                                <>Select Plan <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" /></>
                                             )}
                                         </span>
                                         {!isActive && (
@@ -446,7 +471,11 @@ export default function BillingPage() {
                     plan={selectedPlan}
                     isIndia={geo.isIndia}
                     billingCycle={billingCycle}
-                    onClose={() => setSelectedPlan(null)}
+                    currentPlanPriceCents={activePlanPriceCents}
+                    onClose={() => {
+                        setSelectedPlan(null);
+                        setPendingPlan(null);
+                    }}
                     onSuccess={handlePaymentSuccess}
                 />
             )}

@@ -9,8 +9,25 @@ import { trackPricingViewed, trackSignupClick, trackCtaClicked } from "@/lib/ga"
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-function formatPrice(priceCents: number, interval: Plan["interval"]): string {
+function formatPrice(priceCents: number, interval: Plan["interval"], planCurrency: string = "usd", userCurrency: string = "usd"): string {
     if (priceCents === 0) return "Free";
+
+    const planCurrLower = planCurrency.toLowerCase();
+
+    // If plan is explicitly INR in the backend
+    if (planCurrLower === "inr") {
+        const rupees = priceCents / 100;
+        return `₹${rupees.toLocaleString("en-IN")}`;
+    }
+
+    // If user is in India, but plan is USD in backend -> convert for display
+    if (userCurrency === "inr" && planCurrLower === "usd") {
+        const dollars = priceCents / 100;
+        const rupees = Math.round(dollars * 84); // Default conversation rate for display
+        return `₹${rupees.toLocaleString("en-IN")}`;
+    }
+
+    // Default USD formatting
     const dollars = priceCents / 100;
     return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)}`;
 }
@@ -84,10 +101,22 @@ export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] })
     const [isVisible, setIsVisible] = useState(false);
     const [plans] = useState<Plan[]>(initialPlans);
     const [intervalFilter, setIntervalFilter] = useState<IntervalFilter>("month");
+    const [userCurrency, setUserCurrency] = useState<"inr" | "usd">("usd");
     const sectionRef = useRef<HTMLDivElement>(null);
 
-    // Intersection observer for fade-in animation
+    // Intersection observer for fade-in animation and locale detection
     useEffect(() => {
+        try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (tz && (tz === "Asia/Kolkata" || tz === "Asia/Calcutta")) {
+                setUserCurrency("inr");
+            } else {
+                setUserCurrency("usd");
+            }
+        } catch (e) {
+            setUserCurrency("usd");
+        }
+
         const ref = sectionRef.current;
         if (!ref) return;
         const observer = new IntersectionObserver(
@@ -107,10 +136,20 @@ export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] })
     const availableIntervals = Array.from(new Set(plans.map((p) => p.interval)));
     const showToggle = availableIntervals.includes("month") && availableIntervals.includes("year");
 
+    const hasInrPlans = plans.some((p) => p.currency?.toLowerCase() === "inr");
+
     const visiblePlans = plans.filter((p) => {
-        if (p.interval === "one_time") return intervalFilter === "month"; // show free with monthly
+        const planCurr = p.currency?.toLowerCase() || "usd";
+
+        // If backend actually returned explicitly formatted INR plans, hide USD ones for Indian timezone
+        if (userCurrency === "inr" && hasInrPlans && planCurr !== "inr" && p.price_cents > 0) return false;
+
+        // Hide INR plans for non-Indian timezones
+        if (userCurrency === "usd" && planCurr === "inr") return false;
+
+        if (p.interval === "one_time") return true; // show free with monthly & yearly
         return p.interval === intervalFilter;
-    });
+    }).slice(0, 3); // Max 3 plans
 
     return (
         <section id="pricing" ref={sectionRef} className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
@@ -163,25 +202,25 @@ export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] })
                     </div>
 
                     {/* Plans grid */}
-                    <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 py-12 md:grid-cols-3 lg:gap-8">
+                    <div className="mx-auto flex flex-wrap justify-center gap-6 py-12 lg:gap-8 max-w-[1200px]">
                         {visiblePlans.map((plan, index) => {
                             const popular = POPULAR_SLUGS.has(plan.slug);
                             const features = deriveFeatureList(plan.features);
-                            const price = formatPrice(plan.price_cents, plan.interval);
+                            const price = formatPrice(plan.price_cents, plan.interval, plan.currency, userCurrency);
                             const suffix = intervalLabel(plan);
 
                             return (
                                 <div
                                     key={plan.id}
-                                    className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+                                    className={`relative flex flex-col w-full md:w-[calc(50%-1.5rem)] lg:w-[340px] rounded-2xl border p-6 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                                         } ${popular
-                                            ? "border-purple-500/30 bg-gradient-to-b from-purple-500/5 to-transparent shadow-2xl shadow-purple-500/10 scale-[1.02]"
+                                            ? "border-purple-500/30 bg-gradient-to-b from-purple-500/5 to-transparent shadow-2xl shadow-purple-500/10 scale-[1.02] z-10"
                                             : "border-white/5 bg-slate-900/30 hover:border-white/15"
                                         }`}
                                     style={{ transitionDelay: `${index * 150}ms` }}
                                 >
                                     {popular && (
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
                                             <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-1 text-xs font-semibold text-white shadow-lg shadow-purple-500/25">
                                                 Most Popular
                                             </span>
@@ -227,7 +266,7 @@ export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] })
                                     </ul>
 
                                     {/* CTA */}
-                                    <Link href="/register" className="w-full">
+                                    <Link href="/register" className="w-full mt-auto">
                                         <Button
                                             className={`w-full rounded-xl h-12 cursor-pointer transition-all duration-300 ${popular
                                                 ? "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 text-white"
@@ -248,3 +287,4 @@ export default function Pricing({ initialPlans = [] }: { initialPlans: Plan[] })
         </section>
     );
 }
+
