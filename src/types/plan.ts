@@ -1,4 +1,9 @@
 export interface PlanFeatures {
+    credits?: {
+        monthly_credits?: number;
+        tokens_per_credit?: number;
+        rollover?: boolean;
+    };
     team?: {
         max_users?: number;
     };
