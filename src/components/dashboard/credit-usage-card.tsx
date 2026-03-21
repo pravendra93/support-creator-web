@@ -16,6 +16,8 @@ interface CreditBalance {
     warn_80: boolean;
     warn_95: boolean;
     recent_usage: RecentUsageEntry[];
+    plan_name?: string;
+    plan_monthly_credits?: number;
 }
 
 interface RecentUsageEntry {
@@ -259,7 +261,12 @@ export function CreditUsageCard() {
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-white">Credit Usage</h3>
-                        <p className="text-[10px] text-slate-500">This billing period</p>
+                        <p className="text-[10px] text-slate-500">
+                            {data.plan_name
+                                ? <><span className="text-indigo-400 font-semibold">{data.plan_name}</span>{data.plan_monthly_credits ? ` · ${data.plan_monthly_credits.toLocaleString()} credits/mo` : ""}</>
+                                : "This billing period"
+                            }
+                        </p>
                     </div>
                 </div>
                 <button

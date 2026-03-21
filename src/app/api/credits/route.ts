@@ -4,7 +4,7 @@ import { BACKEND_URL } from "@/lib/config";
 /**
  * GET /api/credits
  * Proxy to backend GET /v1/stats/tenant/{tenantId}/credits
- * Returns credit balance + recent usage log for the authenticated user's tenant.
+ * Returns credit balance + recent usage log + plan credit limit.
  */
 export async function GET(request: NextRequest) {
     try {
@@ -18,18 +18,19 @@ export async function GET(request: NextRequest) {
             "Content-Type": "application/json",
         };
 
-        // 1. Get user + tenant info
+        // 1. Get user info (includes plan_slug)
         const meRes = await fetch(`${BACKEND_URL}/v1/auth/me`, { headers });
         if (!meRes.ok) {
             return NextResponse.json({ message: "Failed to fetch user info" }, { status: meRes.status });
         }
         const user = await meRes.json();
 
-        // 2. Get tenant id from the user's owned tenants
+        // 2. Resolve tenant ID
         let tenantId: string | null = null;
+        let planName: string = user.plan_slug ?? "Free";
+        let planMonthlyCredits: number = 0;
 
         if (user.role === "super_admin") {
-            // Super admin: let them pass a tenant_id query param
             tenantId = request.nextUrl.searchParams.get("tenant_id");
             if (!tenantId) {
                 return NextResponse.json({ message: "tenant_id required for super_admin" }, { status: 400 });
@@ -41,23 +42,31 @@ export async function GET(request: NextRequest) {
             }
             const tenants = await tenantRes.json();
             if (!tenants || tenants.length === 0) {
-                // No tenant yet — return zero-state
                 return NextResponse.json({
-                    credits_total: 0,
-                    credits_used: 0,
-                    credits_remaining: 0,
-                    usage_pct: 0,
-                    estimated_convos_left: 0,
-                    is_exhausted: false,
-                    warn_80: false,
-                    warn_95: false,
-                    recent_usage: [],
+                    credits_total: 0, credits_used: 0, credits_remaining: 0,
+                    usage_pct: 0, estimated_convos_left: 0,
+                    is_exhausted: false, warn_80: false, warn_95: false,
+                    recent_usage: [], plan_name: planName, plan_monthly_credits: 0,
                 });
             }
             tenantId = tenants[0].id;
         }
 
-        // 3. Fetch credit balance from backend
+        // 3. Fetch plan details to get credit limit from features
+        if (user.plan_slug) {
+            try {
+                const planRes = await fetch(`${BACKEND_URL}/v1/plans/${user.plan_slug}`, { headers });
+                if (planRes.ok) {
+                    const planData = await planRes.json();
+                    planName = planData.name ?? planName;
+                    planMonthlyCredits = planData.features?.credits?.monthly_credits ?? 0;
+                }
+            } catch {
+                // non-fatal: fall through with defaults
+            }
+        }
+
+        // 4. Fetch credit balance from backend
         const creditsRes = await fetch(
             `${BACKEND_URL}/v1/stats/tenant/${tenantId}/credits`,
             { headers }
@@ -72,7 +81,13 @@ export async function GET(request: NextRequest) {
         }
 
         const data = await creditsRes.json();
-        return NextResponse.json(data);
+
+        // Merge plan info into the response
+        return NextResponse.json({
+            ...data,
+            plan_name: planName,
+            plan_monthly_credits: planMonthlyCredits,
+        });
 
     } catch (error) {
         console.error("Credits API proxy error:", error);
