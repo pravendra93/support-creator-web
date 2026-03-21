@@ -384,26 +384,111 @@ export default function BillingPage() {
                                         </div>
                                     )}
 
-                                    <div className="flex-1 space-y-4 mb-10">
-                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Everything in {plan.name}:</p>
-                                        {plan.features && Object.keys(plan.features).length > 0 && (
-                                            <ul className="space-y-4">
-                                                {Object.entries(plan.features).flatMap(([category, details]) => {
-                                                    if (typeof details !== "object" || !details) return [];
-                                                    return Object.entries(details).slice(0, 4).map(([key, value]) => (
-                                                        <li key={`${category}-${key}`} className="flex items-start gap-3">
-                                                            <div className="mt-1 w-4 h-4 rounded-full bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                                                                <CheckCircle2 className="h-3 w-3 text-indigo-400" />
-                                                            </div>
-                                                            <span className="text-gray-300 text-sm">
-                                                                <span className="capitalize">{key.replace(/_/g, " ")}</span>
-                                                                <span className="ml-1 text-gray-500">: {String(value)}</span>
-                                                            </span>
-                                                        </li>
-                                                    ));
-                                                })}
-                                            </ul>
+                                    {/* ── Feature List ─────────────────────────── */}
+                                    <div className="flex-1 space-y-3 mb-10">
+
+                                        {/* Credit Highlight Block — always shown first */}
+                                        {plan.features?.credits?.monthly_credits && (
+                                            <div
+                                                className="p-4 rounded-2xl mb-4"
+                                                style={{
+                                                    background: "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(99,102,241,0.08))",
+                                                    border: "1px solid rgba(34,211,238,0.2)",
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Zap className="h-4 w-4 text-cyan-400 fill-current" />
+                                                        <span className="text-xs font-black text-cyan-300 uppercase tracking-widest">
+                                                            Monthly Credits
+                                                        </span>
+                                                    </div>
+                                                    {plan.features?.credits?.rollover && (
+                                                        <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                                            Rolls Over
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-3xl font-black text-white">
+                                                    {plan.features.credits.monthly_credits.toLocaleString()}
+                                                </p>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                                                    <p className="text-[11px] text-cyan-400/70">
+                                                        ≈ {(plan.features.credits.monthly_credits * 1000).toLocaleString()} tokens
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500">
+                                                        ~{plan.features.credits.monthly_credits.toLocaleString()} conversations
+                                                    </p>
+                                                </div>
+                                            </div>
                                         )}
+
+                                        {/* Curated limit rows */}
+                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                            What&apos;s included:
+                                        </p>
+                                        <ul className="space-y-2.5">
+                                            {/* Team */}
+                                            {plan.features?.team?.max_users && (
+                                                <FeatureRow
+                                                    icon="👥"
+                                                    label="Team members"
+                                                    value={plan.features.team.max_users >= 9999 ? "Unlimited" : `Up to ${plan.features.team.max_users}`}
+                                                />
+                                            )}
+                                            {/* KB storage */}
+                                            {plan.features?.knowledge_base?.max_storage_mb && (
+                                                <FeatureRow
+                                                    icon="🗂️"
+                                                    label="Knowledge base"
+                                                    value={
+                                                        plan.features.knowledge_base.max_storage_mb >= 51200
+                                                            ? "50 GB storage"
+                                                            : plan.features.knowledge_base.max_storage_mb >= 1024
+                                                                ? `${Math.round(plan.features.knowledge_base.max_storage_mb / 1024)} GB storage`
+                                                                : `${plan.features.knowledge_base.max_storage_mb} MB storage`
+                                                    }
+                                                />
+                                            )}
+                                            {/* Files */}
+                                            {plan.features?.knowledge_base?.max_files && (
+                                                <FeatureRow
+                                                    icon="📄"
+                                                    label="Max files"
+                                                    value={plan.features.knowledge_base.max_files >= 9999 ? "Unlimited" : `${plan.features.knowledge_base.max_files} files`}
+                                                />
+                                            )}
+                                            {/* Analytics retention */}
+                                            {plan.features?.analytics?.retention_days && (
+                                                <FeatureRow
+                                                    icon="📊"
+                                                    label="Analytics history"
+                                                    value={plan.features.analytics.retention_days >= 9999 ? "Unlimited" : `${plan.features.analytics.retention_days} days`}
+                                                />
+                                            )}
+                                            {/* Support SLA */}
+                                            {plan.features?.support && (
+                                                <FeatureRow
+                                                    icon={plan.features.support.priority_support ? "🚀" : "💬"}
+                                                    label="Support"
+                                                    value={
+                                                        plan.features.support.priority_support
+                                                            ? `Priority (${plan.features.support.sla ?? "fast"} response)`
+                                                            : plan.features.support.sla
+                                                                ? `Email (${plan.features.support.sla} response)`
+                                                                : "Community"
+                                                    }
+                                                />
+                                            )}
+                                            {/* Overage */}
+                                            {plan.features?.billing?.overage_allowed !== undefined && (
+                                                <FeatureRow
+                                                    icon={plan.features.billing.overage_allowed ? "✅" : "🔒"}
+                                                    label="Credit overage"
+                                                    value={plan.features.billing.overage_allowed ? "Allowed" : "Not allowed"}
+                                                />
+                                            )}
+                                        </ul>
                                     </div>
 
                                     <button
@@ -480,5 +565,18 @@ export default function BillingPage() {
                 />
             )}
         </div>
+    );
+}
+
+/* ── FeatureRow sub-component ───────────────────────────────────────────── */
+function FeatureRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+    return (
+        <li className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-base flex-shrink-0 leading-none">{icon}</span>
+                <span className="text-gray-400 text-sm truncate">{label}</span>
+            </div>
+            <span className="text-gray-200 text-sm font-semibold text-right flex-shrink-0">{value}</span>
+        </li>
     );
 }

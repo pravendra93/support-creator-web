@@ -8,6 +8,7 @@ import { useAuth } from "@/context/auth-context";
 import { useRouter } from "next/navigation";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { CreditUsageCard } from "@/components/dashboard/credit-usage-card";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -271,6 +272,13 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Credit Usage — full width below the main grid (non-admin only) */}
+            {!isSuperAdmin && (
+                <div className="max-w-sm">
+                    <CreditUsageCard />
+                </div>
+            )}
         </div>
     );
 }
