@@ -36,8 +36,18 @@ export async function POST(request: Request) {
         const data = await response.json();
 
         if (!response.ok) {
+            // data.detail may be:
+            //  - a string  → e.g. "Email already registered"
+            //  - an array  → Pydantic validation errors: [{msg: "...", ...}]
+            const detail = data.detail;
+            let message = "Registration failed";
+            if (typeof detail === "string") {
+                message = detail;
+            } else if (Array.isArray(detail) && detail.length > 0) {
+                message = detail[0]?.msg || message;
+            }
             return NextResponse.json(
-                { message: data.detail?.[0]?.msg || "Registration failed" },
+                { message },
                 { status: response.status }
             );
         }

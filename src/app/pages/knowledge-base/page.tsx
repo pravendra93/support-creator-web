@@ -101,6 +101,7 @@ function KnowledgeBaseContent() {
                             workspaceName: tenant.name,
                             type: f.file_type?.toUpperCase() || 'PDF',
                             size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
+                            raw_size: f.file_size,
                             status: f.status,
                             uploadedAt: new Date(f.created_at),
                             storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`,

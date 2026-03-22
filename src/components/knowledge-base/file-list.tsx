@@ -23,6 +23,7 @@ export interface KnowledgeBaseFile {
     workspaceName?: string;
     storage_url?: string;
     estimated_time?: number;
+    raw_size?: number; // File size in bytes for calculating estimated credits
 }
 
 interface FileListProps {
@@ -80,6 +81,7 @@ export function FileList({ files, onView, onProcess, onStop }: FileListProps) {
                         <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Workspace</TableHead>
                         <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Type</TableHead>
                         <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Size</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Estimated Credits</TableHead>
                         <TableHead className="font-semibold text-xs uppercase text-muted-foreground">Status</TableHead>
                         <TableHead className="text-right font-semibold text-xs uppercase text-muted-foreground">Actions</TableHead>
                     </TableRow>
@@ -113,6 +115,14 @@ export function FileList({ files, onView, onProcess, onStop }: FileListProps) {
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">{file.size}</TableCell>
+                            <TableCell>
+                                <div className="flex items-center gap-1.5 text-sm">
+                                    <span className="font-medium text-indigo-400">
+                                        {file.raw_size ? Math.max(1, Math.ceil(file.raw_size / 4000)).toLocaleString() : "-"}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">credits</span>
+                                </div>
+                            </TableCell>
                             <TableCell>
                                 <div className="flex flex-col gap-1">
                                     <Badge variant="outline" className={`rounded-full px-3 py-0.5 text-xs font-medium border ${statusMap[file.status].className}`}>
