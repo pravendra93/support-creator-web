@@ -414,10 +414,10 @@ export default function BillingPage() {
                                                 </p>
                                                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                                                     <p className="text-[11px] text-cyan-400/70">
-                                                        ≈ {(plan.features.credits.monthly_credits * 1000).toLocaleString()} tokens
+                                                        ≈ {((plan.features.credits.monthly_credits) * (plan.features.credits.tokens_per_credit ?? 1000)).toLocaleString()} tokens
                                                     </p>
                                                     <p className="text-[11px] text-slate-500">
-                                                        ~{plan.features.credits.monthly_credits.toLocaleString()} conversations
+                                                        ~{Math.round(plan.features.credits.monthly_credits / 1).toLocaleString()} conversations
                                                     </p>
                                                 </div>
                                             </div>

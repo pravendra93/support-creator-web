@@ -15,7 +15,8 @@ import {
     ScrollText,
     BookOpen,
     Activity,
-    Eye
+    Eye,
+    Zap,
 } from "lucide-react";
 
 export const sidebarLinks = [
@@ -25,6 +26,7 @@ export const sidebarLinks = [
     { name: "Conversations", href: "/pages/conversations", icon: MessageSquare },
     // { name: "Teams", href: "/pages/team", icon: Users },
     { name: "Payments", href: "/pages/billing", icon: CreditCard },
+    { name: "Credits", href: "/pages/credits", icon: Zap },
     { name: "Workspaces", href: "/pages/tenants", icon: Building2 },
     { name: "Accounts", href: "/pages/accounts", icon: Users, roles: ["super_admin"] },
     { name: "Subscriptions", href: "/pages/subscriptions", icon: CreditCard, roles: ["super_admin"] },
