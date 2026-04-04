@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import {
     Loader2, Sparkles, Layout, MessageSquare, Zap,
     ChevronDown, X, CheckCircle2, XCircle, AlertTriangle,
-    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check
+    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check, Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
@@ -34,6 +34,7 @@ interface WorkspaceReadiness {
     status: ReadinessStatus;
     hasApiKey: boolean;
     hasBotConfig: boolean;
+    isSubscribed: boolean;
     apiKey?: string;
 }
 
@@ -55,6 +56,7 @@ function PreviewBotContent() {
     const [isCheckingReadiness, setIsCheckingReadiness] = useState(true);
     const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false);
     const [isAutoSelected, setIsAutoSelected] = useState(false);
+    const [isTenantSubscribed, setIsTenantSubscribed] = useState<boolean | null>(null);
 
     // API Key validation
     const [keyValidationState, setKeyValidationState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
@@ -220,14 +222,24 @@ function PreviewBotContent() {
                         const hasApiKey = tenantKeys.length > 0;
 
                         let hasBotConfig = false;
+                        let isSubscribed = false;
                         try {
                             const cfgRes = await fetch(`/api/tenants/${tenant.id}/chatbot`);
+                            const tenantRes = await fetch(`/api/tenants/${tenant.id}`);
+
                             if (cfgRes.ok) {
                                 const cfg = await cfgRes.json();
                                 hasBotConfig = !!(cfg && (cfg.name || cfg.id));
                             }
+
+                            if (tenantRes.ok) {
+                                const tenantData = await tenantRes.json();
+                                // A tenant is considered subscribed if they have an active plan
+                                isSubscribed = !!(tenantData.plan_id && tenantData.status === "active");
+                            }
                         } catch {
                             hasBotConfig = false;
+                            isSubscribed = false;
                         }
 
                         const status: ReadinessStatus =
@@ -239,6 +251,7 @@ function PreviewBotContent() {
                             status,
                             hasApiKey,
                             hasBotConfig,
+                            isSubscribed,
                             apiKey: tenantKeys[0]?.key
                         };
                     })
@@ -278,6 +291,7 @@ function PreviewBotContent() {
                     setShowWorkspaceSelector(true);
                 } else if (wsToSelect) {
                     setSelectedTenantId(wsToSelect.tenant.id);
+                    setIsTenantSubscribed(wsToSelect.isSubscribed);
                     if (wsToSelect.apiKey) {
                         updateApiKey(wsToSelect.apiKey);
                         setTempApiKey(wsToSelect.apiKey);
@@ -306,6 +320,7 @@ function PreviewBotContent() {
 
     const selectWorkspace = (ws: WorkspaceReadiness) => {
         setSelectedTenantId(ws.tenant.id);
+        setIsTenantSubscribed(ws.isSubscribed);
         if (ws.apiKey) {
             updateApiKey(ws.apiKey);
             setTempApiKey(ws.apiKey);
@@ -367,7 +382,7 @@ function PreviewBotContent() {
     }
 
     return (
-        <div className="flex flex-col gap-6 p-8 h-screen bg-[#0A0C12] text-white overflow-hidden relative">
+        <div className="flex flex-col gap-6 p-6 sm:p-8 min-h-screen lg:h-screen bg-[#0A0C12] text-white overflow-y-auto lg:overflow-hidden relative">
             {/* Dynamic Background Elements */}
             <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
             <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
@@ -476,6 +491,7 @@ function PreviewBotContent() {
                                             const newTenantId = e.target.value;
                                             const ws = workspaceReadiness.find(w => w.tenant.id === newTenantId);
                                             setSelectedTenantId(newTenantId);
+                                            setIsTenantSubscribed(ws?.isSubscribed ?? null);
                                             if (ws?.apiKey) {
                                                 updateApiKey(ws.apiKey);
                                                 setTempApiKey(ws.apiKey);
@@ -691,9 +707,9 @@ function PreviewBotContent() {
             </div>
 
             {/* Split Layout */}
-            <div className="flex-1 flex gap-8 min-h-0 relative z-10 animate-in fade-in slide-in-from-bottom duration-1000 delay-500">
+            <div className="flex-1 flex flex-col lg:flex-row gap-8 min-h-0 relative z-10 animate-in fade-in slide-in-from-bottom duration-1000 delay-500 pb-10 lg:pb-0">
                 {/* Left Panel: Tasks/Config Content */}
-                <div className="w-1/2 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar text-white">
+                <div className="w-full lg:w-1/2 flex flex-col gap-6 overflow-y-auto lg:pr-2 custom-scrollbar text-white shrink-0">
                     {activeTask === "intro" && (
                         <div className="min-h-full">
                             {apiKey && selectedTenantId ? (
@@ -883,7 +899,7 @@ function PreviewBotContent() {
                 </div>
 
                 {/* Right Panel: The Simulator Iframe */}
-                <div className="w-1/2 bg-[#0D1117] rounded-[32px] border border-white/5 overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10 group transition-all duration-700">
+                <div className="w-full lg:w-1/2 min-h-[550px] bg-[#0D1117] rounded-[32px] border border-white/5 overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10 group transition-all duration-700">
                     {/* Simulated Browser Bar */}
                     <div className="h-8 bg-[#13171F] border-b border-white/5 flex items-center px-4 gap-1.5 shrink-0">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500/40"></div>
@@ -1014,12 +1030,69 @@ function PreviewBotContent() {
                     ) : (
                         <div className="relative w-full h-full">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#13171F_0%,#0A0C12_100%)]" />
-                            <iframe
-                                key={apiKey + refreshKey + selectedTenantId}
-                                src={`/preview-embed?api_key=${apiKey}${selectedTenantId ? `&tenant_id=${selectedTenantId}` : ''}`}
-                                className="w-full h-full border-0 relative z-10"
-                                title="Chatbot Simulator"
-                            />
+
+                            {isTenantSubscribed === false ? (
+                                <div className="absolute inset-0 z-40 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-500">
+                                    <div className="min-h-full flex flex-col items-center justify-center gap-6 px-6 sm:px-12 text-center py-12 sm:py-16 relative">
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] pointer-events-none" />
+
+                                        <div className="relative group shrink-0">
+                                            <div className="absolute -inset-8 rounded-full blur-[60px] opacity-20 bg-orange-500 animate-pulse"></div>
+                                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-slate-900 to-slate-800 border-2 border-white/10 flex items-center justify-center shadow-2xl">
+                                                <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-orange-500 animate-bounce" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4 sm:space-y-6 max-w-sm sm:max-w-md mx-auto z-10">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 mb-2">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Access Restricted</span>
+                                            </div>
+                                            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-none uppercase">
+                                                Premium <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Locked</span>
+                                            </h3>
+                                            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+                                                This <strong className="text-white">Simulator Hub</strong> requires an active premium subscription to initialize neural protocols.
+                                            </p>
+                                            <div className="pt-2 sm:pt-4 flex flex-col gap-3 w-full">
+                                                <Button
+                                                    asChild
+                                                    className="w-full py-5 sm:py-6 bg-white text-[#0A0C12] hover:bg-slate-100 rounded-2xl font-black shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                                                >
+                                                    <a href="/pages/billing">
+                                                        Upgrade Now <ArrowRight className="w-4 h-4" />
+                                                    </a>
+                                                </Button>
+                                                {/* <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest truncate">Bot ID: {selectedTenantId?.slice(0, 8)}...{selectedTenantId?.slice(-4)}</p> */}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <iframe
+                                    key={apiKey + refreshKey + selectedTenantId}
+                                    srcDoc={`
+                                        <!DOCTYPE html>
+                                        <html>
+                                          <head>
+                                            <meta charset="utf-8">
+                                            <meta name="viewport" content="width=device-width, initial-scale=1">
+                                            <style>
+                                              body { margin: 0; background: transparent; overflow: hidden; }
+                                            </style>
+                                            <script 
+                                              src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js" 
+                                              data-api-key="${apiKey}"
+                                              ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ''}
+                                              async>
+                                            </script>
+                                          </head>
+                                          <body></body>
+                                        </html>
+                                    `}
+                                    className="w-full h-full border-0 relative z-10"
+                                    title="Chatbot Simulator"
+                                />
+                            )}
                         </div>
                     )}
                 </div>
