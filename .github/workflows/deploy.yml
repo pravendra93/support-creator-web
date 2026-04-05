@@ -41,8 +41,14 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ghcr.io/${{ github.repository }}/nextjs:latest
 
             cd /home/deploy
 
-            docker compose up -d
+            # Pull latest images defined in docker-compose.yml
+            docker compose pull
+
+            # Recreate containers with new image and force update
+            docker compose up -d --force-recreate
+
+            # Cleanup old images to save disk space
+            docker image prune -f
