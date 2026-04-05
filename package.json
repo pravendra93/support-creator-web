@@ -2,6 +2,7 @@
   "name": "harmonic-perseverance",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -32,6 +33,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.67.0",
+    "sharp": "^0.33.5",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4",
     "tailwindcss-animate": "^1.0.7",

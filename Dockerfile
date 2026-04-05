@@ -1,42 +1,58 @@
+# syntax=docker/dockerfile:1.4
+# Optimized Dockerfile for Next.js with pnpm and standalone output
+
+# =====================
+# Base stage for shared configs
+# =====================
+FROM node:20-slim AS base
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
 # =====================
 # Dependencies
 # =====================
-FROM node:20-slim AS deps
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm ci
+FROM base AS deps
+# Install dependencies based on the preferred package manager
+COPY package.json pnpm-lock.yaml ./
 
+# 🔥 pnpm cache (optimized store)
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # =====================
 # Build
 # =====================
-FROM node:20-slim AS builder
-WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-
+FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
 
+# Build the application
+RUN pnpm build
 
 # =====================
-# Runtime (TINY)
+# Runtime
 # =====================
-FROM node:20-slim AS runner
+FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
 
-RUN useradd -m nextjs
+# Create a non-root user for security
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 nextjs
 
-# Only the standalone server + minimal deps
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# Set the correct permissions for nextjs user
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Copy necessary files from builder
+# Automatically leverages the standalone output from next.config.ts
 COPY --from=builder /app/public ./public
-
-RUN mkdir -p /app/.next/cache && \
-    chown -R nextjs:nextjs /app
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
