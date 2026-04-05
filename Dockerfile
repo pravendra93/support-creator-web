@@ -7,19 +7,22 @@
 FROM node:20-slim AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN npm install -g pnpm@9.15.0
 
 # =====================
 # Dependencies
 # =====================
 FROM base AS deps
-# Install dependencies based on the preferred package manager
+
+ENV PNPM_STORE_PATH=/pnpm/store
+
 COPY package.json pnpm-lock.yaml ./
 
-# 🔥 pnpm cache (optimized store)
+RUN pnpm config set registry https://registry.npmmirror.com
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
-
+# Install dependencies based on the preferred package manager
 # =====================
 # Build
 # =====================
@@ -32,7 +35,7 @@ RUN pnpm build
 
 # =====================
 # Runtime
-# =====================
+# ===================== 
 FROM base AS runner
 WORKDIR /app
 
