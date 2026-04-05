@@ -58,6 +58,12 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
+
+        if (!formData.name.trim() || !formData.domain.trim()) {
+            setError("Workspace Name and Domain are required");
+            return;
+        }
+
         setSubmitting(true);
 
         // Remove owner_account_id if it's empty string
@@ -68,7 +74,7 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
 
         try {
             await onSubmit(submitData);
-            if (isEditing) {
+            if (isEditing || currentUser?.is_subscribed) {
                 router.push("/pages/tenants");
             } else {
                 router.push("/pages/billing");
@@ -113,10 +119,11 @@ export function TenantForm({ initialData, onSubmit, isEditing = false }: TenantF
 
             <div className="space-y-2">
                 <label className="text-sm font-medium">
-                    Workspace Domain
+                    Workspace Domain *
                 </label>
                 <input
                     type="text"
+                    required
                     value={formData.domain}
                     onChange={(e) =>
                         setFormData({ ...formData, domain: e.target.value.toLowerCase().replace(/\s+/g, '-') })
