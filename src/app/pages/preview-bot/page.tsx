@@ -1,34 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 import {
-    Loader2, Sparkles, Layout, MessageSquare, Zap,
-    ChevronDown, X, CheckCircle2, XCircle, AlertTriangle,
-    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check, Lock
+    Loader2, Sparkles, MessageSquare, Zap, Target, Coins, Calendar,
+    X, CheckCircle2, XCircle, AlertTriangle,
+    ArrowRight, Key, Bot, Settings, Copy, Check, Lock,
+    ChevronDown, RefreshCw, Send, Mic, User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
-import { ChatBotConfig } from "@/components/chatbot/chatbot-config";
 import { CreateApiKeyModal } from "@/components/api-keys/create-api-key-modal";
-import { PageHeader } from "@/components/shared/page-header";
 
-interface Tenant {
-    id: string;
-    name: string;
-}
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-interface ApiKeyItem {
-    id: string;
-    name: string;
-    key: string;
-    is_active: boolean;
-    tenant_id?: string;
-}
-
+interface Tenant { id: string; name: string; }
+interface ApiKeyItem { id: string; name: string; key: string; is_active: boolean; tenant_id?: string; }
 type ReadinessStatus = "ready" | "partial" | "not_setup";
-
 interface WorkspaceReadiness {
     tenant: Tenant;
     status: ReadinessStatus;
@@ -38,1065 +26,699 @@ interface WorkspaceReadiness {
     apiKey?: string;
 }
 
+// ─── Dot indicator ───────────────────────────────────────────────────────────
+
+function StatusDot({ status }: { status: ReadinessStatus }) {
+    const color = status === "ready" ? "bg-emerald-500" : status === "partial" ? "bg-amber-500" : "bg-red-500/60";
+    return <div className={cn("w-2 h-2 rounded-full shrink-0", color, status !== "not_setup" && "animate-pulse")} />;
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
 function PreviewBotContent() {
-    const [tenants, setTenants] = useState<Tenant[]>([]);
-    const [isLoadingTenants, setIsLoadingTenants] = useState(true);
-    const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
-    const [apiKey, setApiKey] = useState<string>("");
-    const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
-    const [isCreateApiKeyModalOpen, setIsCreateApiKeyModalOpen] = useState(false);
-    const [tempApiKey, setTempApiKey] = useState("");
-    const [refreshKey, setRefreshKey] = useState(0);
-    const [activeTask, setActiveTask] = useState<"intro" | "config" | "voice">("intro");
-    const [isSnippetCopied, setIsSnippetCopied] = useState(false);
     const { user } = useAuth();
 
-    // Smart workspace detection
+    const [tenants, setTenants] = useState<Tenant[]>([]);
+    const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+    const [apiKey, setApiKey] = useState("");
+    const [tempApiKey, setTempApiKey] = useState("");
+    const [activeTab, setActiveTab] = useState<"intro" | "config" | "voice">("intro");
+
     const [workspaceReadiness, setWorkspaceReadiness] = useState<WorkspaceReadiness[]>([]);
     const [isCheckingReadiness, setIsCheckingReadiness] = useState(true);
     const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false);
-    const [isAutoSelected, setIsAutoSelected] = useState(false);
     const [isTenantSubscribed, setIsTenantSubscribed] = useState<boolean | null>(null);
 
-    // API Key validation
     const [keyValidationState, setKeyValidationState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
-    const [keyValidationMessage, setKeyValidationMessage] = useState("");
+    const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+    const [isCreateApiKeyModalOpen, setIsCreateApiKeyModalOpen] = useState(false);
+    const [isSnippetCopied, setIsSnippetCopied] = useState(false);
 
-    const getIntegrationSnippet = () => {
-        const widgetUrl =
-            process.env.NEXT_PUBLIC_WIDGET_URL ||
-            (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.host}/widget.js` : "http://localhost:3000/widget.js");
+    // scroll-to-bottom dummy chat with typing animation
+    const [chatMessages, setChatMessages] = useState([
+        { 
+            role: "bot", 
+            text: "**Hi there! I'm RaKri AI.**\n\nI can help you build and deploy custom AI agents in minutes. How can I transform your business today?" 
+        },
+        { role: "user", text: "I want to automate my support workload" },
+        { 
+            role: "bot", 
+            text: "Excellent goal. Our automation systems typically achieve:\n\n• **70% reduction** in manual ticket volume\n• **<1s average** response time\n• **24/7 coverage** across all regions\n\nWould you like to see our pricing or discuss a specific use-case?" 
+        }
+    ]);
+    const [chatInput, setChatInput] = useState("");
+    const [isBotTyping, setIsBotTyping] = useState(false);
+    const [chatbotConfig, setChatbotConfig] = useState<any>(null);
+    const chatEndRef = useRef<HTMLDivElement>(null);
 
-        return `<script 
-  src="${widgetUrl}" 
-  data-api-key="${apiKey}"
-  async>
-</script>`;
+    const QUICK_ACTIONS = [
+        { label: "Automate Workflows", text: "How can I automate our internal workflows?", icon: Zap },
+        { label: "Reduce Costs", text: "How can AI help reduce my operational costs?", icon: Target },
+        { label: "Support AI", text: "I want to improve our customer support with AI", icon: MessageSquare },
+        { label: "Build AI Product", text: "Can you help me build a new AI-powered product?", icon: Sparkles },
+        { label: "Pricing", text: "Show me the pricing plans", icon: Coins, hiddenFromStart: true },
+        { label: "Book a Call", text: "I want to book a strategic call", icon: Calendar, link: "https://calendly.com/akshaykumar-ojha/30min", hiddenFromStart: true },
+    ];
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    const updateApiKey = (key: string) => {
+        setApiKey(key);
+        localStorage.setItem("simulator_api_key", key);
+    };
+
+    const getSnippet = () => {
+        const url = process.env.NEXT_PUBLIC_WIDGET_URL ?? "http://localhost:8001/static/widget.js";
+        return `<script\n  src="${url}"\n  data-api-key="${apiKey}"\n  async>\n</script>`;
     };
 
     const handleCopySnippet = () => {
-        navigator.clipboard.writeText(getIntegrationSnippet());
+        navigator.clipboard.writeText(getSnippet());
         setIsSnippetCopied(true);
         setTimeout(() => setIsSnippetCopied(false), 2000);
     };
 
-    // Check for API keys and open appropriate modal
-    const handleApiKeyLinkClick = async () => {
+    const handleChatSend = useCallback((overrideText?: string) => {
+        const msg = overrideText || chatInput.trim();
+        if (!msg) return;
+
+        if (!overrideText) setChatInput("");
+        setChatMessages(prev => [...prev, { role: "user", text: msg }]);
+        setIsBotTyping(true);
+
+        // Realistic response simulation with variable delay
+        const delay = 1000 + Math.random() * 1000;
+        setTimeout(() => {
+            setIsBotTyping(false);
+            const lower = msg.toLowerCase();
+            let response = "**That's a strategic move.**\n\nRaKri AI allows you to scale at 10x velocity by automating high-frequency tasks:\n\n• **Auto-Resolution**: Handle common queries instantly.\n• **Context Sync**: Real-time knowledge retrieval.\n• **Human Handoff**: Intelligent escalation when needed.\n\nWould you like to see a **personalized demo** or explore our **pricing tiers**?";
+
+            if (lower.includes("pricing")) {
+                response = "**Our pricing is designed for scale.**\n\nWe offer three main tiers:\n\n1. **Essential ($49/mo)**: Perfect for startups.\n2. **Pro ($199/mo)**: Advanced orchestration for growing teams.\n3. **Enterprise**: Custom solutions for high-volume requirements.\n\nWould you like to **book a call** to find the absolute best fit for your workload?";
+            } else if (lower.includes("automate")) {
+                response = "**Automation is the engine of modern growth.**\n\nBy implementing RaKri AI, we can help you:\n\n• **Eliminate 60% of manual data entry**\n• **Sync cross-department communications**\n• **Trigger autonomous workflows** based on user intent.\n\nShall we look at some **specific use cases** next?";
+            } else if (lower.includes("reduce costs") || lower.includes("cost")) {
+                response = "**Efficiency leads directly to ROI.**\n\nOur partners typically see a 35% reduction in operational overhead within 90 days of implementation. This is achieved through instant response logic and intelligent triaging.\n\nShould I show you our **pricing calculator**?";
+            } else if (lower.includes("support")) {
+                response = "**AI-powered support is no longer optional.**\n\nWe provide <1s response times and 99% accuracy by pulling directly from your knowledge base. This reduces support stress and boosts NPS.\n\nWould you like to **see how the widget looks** on your site?";
+            } else if (lower.includes("book a call") || lower.includes("reserve") || lower.includes("strategic call")) {
+                response = "**I've opened our strategist's calendar for you!**\n\nOne of our experts will help you map out an AI roadmap specific to your data. Is there a particular challenge you'd like to solve in the next 30 days?";
+                window.open("https://calendly.com/akshaykumar-ojha/30min", "_blank");
+            }
+
+            setChatMessages(prev => [...prev, { role: "bot", text: response }]);
+        }, delay);
+    }, [chatInput]);
+
+    const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
+        if (action.link && action.label === "Book a Call") {
+            window.open(action.link, "_blank");
+            handleChatSend(action.text);
+        } else {
+            handleChatSend(action.text);
+        }
+    };
+
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [chatMessages, isBotTyping]);
+
+    // ── API Key modal open ──────────────────────────────────────────────────
+
+    const handleApiKeyModalOpen = async () => {
         try {
             const res = await fetch("/api/api-keys");
             if (res.ok) {
                 const data = await res.json();
                 const keys = Array.isArray(data) ? data : (data.items || []);
-                if (keys.length === 0) {
-                    setIsCreateApiKeyModalOpen(true);
-                } else {
-                    setIsKeyModalOpen(true);
-                }
-            } else {
-                setIsKeyModalOpen(true);
+                if (keys.length === 0) { setIsCreateApiKeyModalOpen(true); return; }
             }
-        } catch (error) {
-            console.error("Failed to check API keys", error);
-            setIsKeyModalOpen(true);
-        }
+        } catch { /* noop */ }
+        setIsKeyModalOpen(true);
     };
 
-    // Save API Key to localStorage when it changes
-    const updateApiKey = (newKey: string) => {
-        setApiKey(newKey);
-        localStorage.setItem("simulator_api_key", newKey);
-    };
+    // ── Validate key ────────────────────────────────────────────────────────
 
-    // Validate API key reactively
-    const validateApiKey = useCallback(async (key: string, existingTenantId?: string | null) => {
-        if (!key || key.length < 10) {
-            setKeyValidationState("idle");
-            setKeyValidationMessage("");
-            return;
-        }
-
+    const validateApiKey = useCallback(async (key: string) => {
+        if (!key || key.length < 10) { setKeyValidationState("idle"); return; }
         setKeyValidationState("validating");
-        setKeyValidationMessage("Validating API Key…");
-
         try {
             const res = await fetch(`/api/widget/init-by-key?key=${key}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.tenant_id) {
                     setKeyValidationState("valid");
-                    setKeyValidationMessage("API Key Connected Successfully");
                     setSelectedTenantId(data.tenant_id);
-                    setRefreshKey(prev => prev + 1);
                     return;
                 }
             }
-
-            // Fallback: if init-by-key failed but we already have a tenant ID
-            // (e.g., from workspace readiness check), try to validate via chatbot config
-            const fallbackTenantId = existingTenantId || selectedTenantId;
-            if (fallbackTenantId) {
-                try {
-                    const cfgRes = await fetch(`/api/tenants/${fallbackTenantId}/chatbot`);
-                    if (cfgRes.ok) {
-                        setKeyValidationState("valid");
-                        setKeyValidationMessage("API Key Connected Successfully");
-                        setSelectedTenantId(fallbackTenantId);
-                        setRefreshKey(prev => prev + 1);
-                        return;
-                    }
-                } catch {
-                    // Fall through to invalid
-                }
-            }
-
-            // If we still have a selectedTenantId from the readiness check, treat as valid
-            // The key was from our own system (localStorage / workspace readiness)
-            if (fallbackTenantId) {
-                setKeyValidationState("valid");
-                setKeyValidationMessage("API Key Connected");
-                setRefreshKey(prev => prev + 1);
-                return;
-            }
-
+            // fallback: if we already have a tenant, treat as valid
+            if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
-            setKeyValidationMessage("Invalid API Key. Please check and try again.");
-        } catch (error) {
-            // Network error — if we have a tenant, still try to proceed
-            const fallbackTenantId = existingTenantId || selectedTenantId;
-            if (fallbackTenantId) {
-                setKeyValidationState("valid");
-                setKeyValidationMessage("API Key Connected");
-                setRefreshKey(prev => prev + 1);
-                return;
-            }
+        } catch {
+            if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
-            setKeyValidationMessage("Failed to validate. Please try again.");
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTenantId]);
 
-    // Validate when apiKey changes
     useEffect(() => {
-        if (apiKey) {
-            // Skip if already validated successfully (from readiness check)
-            if (keyValidationState === "valid") return;
-            validateApiKey(apiKey, selectedTenantId);
-        } else {
-            setKeyValidationState("idle");
-            setKeyValidationMessage("");
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (apiKey && keyValidationState !== "valid") validateApiKey(apiKey);
+        else if (!apiKey) setKeyValidationState("idle");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [apiKey]);
 
-    // Smart Workspace Detection on load
-    useEffect(() => {
-        const checkWorkspaceReadiness = async () => {
-            if (!user) return;
+    // ── Workspace readiness check ────────────────────────────────────────────
 
+    useEffect(() => {
+        if (!user) return;
+        const check = async () => {
             setIsCheckingReadiness(true);
             try {
-                // Fetch tenants + API keys in parallel
-                const [tenantsRes, keysRes] = await Promise.all([
-                    fetch("/api/tenants"),
-                    fetch("/api/api-keys")
-                ]);
-
+                const [tenantsRes, keysRes] = await Promise.all([fetch("/api/tenants"), fetch("/api/api-keys")]);
                 let tenantsList: Tenant[] = [];
                 let apiKeysList: ApiKeyItem[] = [];
+                if (tenantsRes.ok) { tenantsList = await tenantsRes.json(); setTenants(tenantsList); }
+                if (keysRes.ok) { const kd = await keysRes.json(); apiKeysList = Array.isArray(kd) ? kd : (kd.items || []); }
 
-                if (tenantsRes.ok) {
-                    tenantsList = await tenantsRes.json();
-                    setTenants(tenantsList);
-                }
-
-                if (keysRes.ok) {
-                    const keysData = await keysRes.json();
-                    apiKeysList = Array.isArray(keysData) ? keysData : (keysData.items || []);
-                }
-
-                // Check bot config for each tenant
-                const readinessChecks: WorkspaceReadiness[] = await Promise.all(
-                    tenantsList.map(async (tenant) => {
-                        const tenantKeys = apiKeysList.filter(
-                            (k: ApiKeyItem) => k.is_active && (k.tenant_id === tenant.id || !k.tenant_id)
-                        );
-                        const hasApiKey = tenantKeys.length > 0;
-
+                const readiness: WorkspaceReadiness[] = await Promise.all(
+                    tenantsList.map(async (t) => {
+                        const tenantKeys = apiKeysList.filter(k => k.is_active && (k.tenant_id === t.id || !k.tenant_id));
                         let hasBotConfig = false;
                         let isSubscribed = false;
                         try {
-                            const cfgRes = await fetch(`/api/tenants/${tenant.id}/chatbot`);
-                            const tenantRes = await fetch(`/api/tenants/${tenant.id}`);
-
-                            if (cfgRes.ok) {
-                                const cfg = await cfgRes.json();
-                                hasBotConfig = !!(cfg && (cfg.name || cfg.id));
-                            }
-
-                            if (tenantRes.ok) {
-                                const tenantData = await tenantRes.json();
-                                // A tenant is considered subscribed if they have an active plan
-                                isSubscribed = !!(tenantData.plan_id && tenantData.status === "active");
-                            }
-                        } catch {
-                            hasBotConfig = false;
-                            isSubscribed = false;
-                        }
-
-                        const status: ReadinessStatus =
-                            hasApiKey && hasBotConfig ? "ready" :
-                                hasApiKey ? "partial" : "not_setup";
-
-                        return {
-                            tenant,
-                            status,
-                            hasApiKey,
-                            hasBotConfig,
-                            isSubscribed,
-                            apiKey: tenantKeys[0]?.key
-                        };
+                            const [cfgRes, tRes] = await Promise.all([
+                                fetch(`/api/tenants/${t.id}/chatbot`),
+                                fetch(`/api/tenants/${t.id}`)
+                            ]);
+                            if (cfgRes.ok) { const c = await cfgRes.json(); hasBotConfig = !!(c?.name || c?.id); }
+                            if (tRes.ok) { const td = await tRes.json(); isSubscribed = !!(td.plan_id && td.status === "active"); }
+                        } catch { /* noop */ }
+                        const status: ReadinessStatus = tenantKeys.length > 0 && hasBotConfig ? "ready" : tenantKeys.length > 0 ? "partial" : "not_setup";
+                        return { tenant: t, status, hasApiKey: tenantKeys.length > 0, hasBotConfig, isSubscribed, apiKey: tenantKeys[0]?.key };
                     })
                 );
 
-                setWorkspaceReadiness(readinessChecks);
-
-                const readyWorkspaces = readinessChecks.filter(w => w.status === "ready");
+                setWorkspaceReadiness(readiness);
+                const ready = readiness.filter(w => w.status === "ready");
+                const lastId = localStorage.getItem("simulator_last_workspace");
                 const savedKey = localStorage.getItem("simulator_api_key");
-                const lastWorkspace = localStorage.getItem("simulator_last_workspace");
 
-                // Determine which workspace to select
-                let wsToSelect: WorkspaceReadiness | null = null;
-                let shouldShowSelector = false;
-
-                if (lastWorkspace) {
-                    const lastWs = readinessChecks.find(w => w.tenant.id === lastWorkspace);
-                    if (lastWs && lastWs.status !== "not_setup") {
-                        wsToSelect = lastWs;
-                    } else if (lastWs && readinessChecks.length === 1) {
-                        wsToSelect = lastWs;
-                    } else if (readyWorkspaces.length > 0) {
-                        // Fallback to first ready
-                        wsToSelect = readyWorkspaces[0];
-                    } else {
-                        wsToSelect = lastWs || null; // Still select it even if not setup, so user can onboard
-                    }
-                } else if (readyWorkspaces.length === 1) {
-                    wsToSelect = readyWorkspaces[0];
-                } else if (readyWorkspaces.length > 1) {
-                    shouldShowSelector = true;
-                } else if (tenantsList.length > 0) {
-                    wsToSelect = readinessChecks[0];
-                }
-
-                if (shouldShowSelector) {
+                let ws: WorkspaceReadiness | null = null;
+                if (lastId) {
+                    ws = readiness.find(w => w.tenant.id === lastId) ?? (ready[0] ?? readiness[0] ?? null);
+                } else if (ready.length === 1) {
+                    ws = ready[0];
+                } else if (ready.length > 1) {
                     setShowWorkspaceSelector(true);
-                } else if (wsToSelect) {
-                    setSelectedTenantId(wsToSelect.tenant.id);
-                    setIsTenantSubscribed(wsToSelect.isSubscribed);
-                    if (wsToSelect.apiKey) {
-                        updateApiKey(wsToSelect.apiKey);
-                        setTempApiKey(wsToSelect.apiKey);
-                        setKeyValidationState("valid");
-                        setKeyValidationMessage("API Key Connected");
-                    } else {
-                        // Clear any old override if this workspace has no key
-                        updateApiKey("");
-                        setTempApiKey("");
-                        setKeyValidationState("idle");
-                        setKeyValidationMessage("");
-                    }
-                    setIsAutoSelected(true);
-                    localStorage.setItem("simulator_last_workspace", wsToSelect.tenant.id);
+                } else {
+                    ws = readiness[0] ?? null;
                 }
-            } catch (error) {
-                console.error("Failed workspace readiness check", error);
+
+                if (ws) {
+                    setSelectedTenantId(ws.tenant.id);
+                    setIsTenantSubscribed(ws.isSubscribed);
+                    const key = ws.apiKey ?? savedKey ?? "";
+                    if (key) { updateApiKey(key); setTempApiKey(key); setKeyValidationState("valid"); }
+                    localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+                }
+            } catch (e) {
+                console.error("Workspace readiness check failed", e);
             } finally {
                 setIsCheckingReadiness(false);
-                setIsLoadingTenants(false);
             }
         };
-
-        checkWorkspaceReadiness();
+        check();
     }, [user]);
 
-    const selectWorkspace = (ws: WorkspaceReadiness) => {
-        setSelectedTenantId(ws.tenant.id);
-        setIsTenantSubscribed(ws.isSubscribed);
-        if (ws.apiKey) {
-            updateApiKey(ws.apiKey);
-            setTempApiKey(ws.apiKey);
-            setKeyValidationState("valid");
-            setKeyValidationMessage("API Key Connected Successfully");
-        }
-        localStorage.setItem("simulator_last_workspace", ws.tenant.id);
-        setShowWorkspaceSelector(false);
-        setIsAutoSelected(true);
-    };
+    // ── Fetch Chatbot Config ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (!selectedTenantId) return;
+        const fetchConfig = async () => {
+            try {
+                const res = await fetch(`/api/tenants/${selectedTenantId}/chatbot`);
+                if (res.ok) {
+                    const config = await res.json();
+                    setChatbotConfig(config);
+                    // Reset messages based on config
+                    if (config.welcome_message) {
+                        setChatMessages([
+                            { role: "bot", text: `**Hi — I can help you explore how ${config.name || "AI"} can improve your business.**\n\nHere are a few ways I can assist:` }
+                        ]);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch chatbot config", err);
+            }
+        };
+        fetchConfig();
+    }, [selectedTenantId]);
 
-    const getStatusIcon = (status: ReadinessStatus) => {
-        switch (status) {
-            case "ready": return <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />;
-            case "partial": return <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />;
-            case "not_setup": return <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />;
-        }
-    };
-
-    const getStatusLabel = (status: ReadinessStatus) => {
-        switch (status) {
-            case "ready": return "Ready";
-            case "partial": return "Partial";
-            case "not_setup": return "Not Setup";
-        }
-    };
-
-    const getStatusColor = (status: ReadinessStatus) => {
-        switch (status) {
-            case "ready": return "text-emerald-400";
-            case "partial": return "text-amber-400";
-            case "not_setup": return "text-red-400";
-        }
-    };
-
-    const readyCount = workspaceReadiness.filter(w => w.status === "ready").length;
-    const hasAnyReady = readyCount > 0;
-
-    const tasks = [
-        { id: "intro", title: "Introduction", icon: Sparkles },
-        { id: "config", title: "Bot Config", icon: Zap },
-        { id: "voice", title: "Voice Support", icon: Layout },
-    ];
-
-    // Show loading while checking readiness
     if (isCheckingReadiness) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-[#0A0C12] text-white gap-6">
+            <div className="flex flex-col items-center justify-center h-full bg-[#080A10] text-white gap-6">
                 <div className="relative">
                     <div className="absolute -inset-8 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
-                    <Loader2 className="h-12 w-12 animate-spin text-indigo-500 relative z-10" />
+                    <Loader2 className="h-10 w-10 animate-spin text-indigo-500 relative z-10" />
                 </div>
-                <div className="text-center">
-                    <h3 className="text-lg font-bold text-white mb-2">Initializing Bot Simulator</h3>
-                    <p className="text-sm text-slate-500 animate-pulse">Checking workspace readiness…</p>
-                </div>
+                <p className="text-sm text-slate-500 animate-pulse tracking-widest uppercase font-bold">Initializing Experience…</p>
             </div>
         );
     }
 
+    const readyCount = workspaceReadiness.filter(w => w.status === "ready").length;
+
     return (
-        <div className="flex flex-col gap-6 p-6 sm:p-8 min-h-screen lg:h-screen bg-[#0A0C12] text-white overflow-y-auto lg:overflow-hidden relative">
-            {/* Dynamic Background Elements */}
-            <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-            <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="flex h-screen bg-[#080A10] text-white overflow-hidden font-sans">
+            {/* Ambient glows */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[140px]" />
+                <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px]" />
+            </div>
 
-            {/* Workspace Selection Modal - Scenario B */}
-            {showWorkspaceSelector && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div
-                        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-in fade-in duration-300"
-                        onClick={() => setShowWorkspaceSelector(false)}
-                    />
-                    <div className="relative w-full max-w-2xl bg-[#13171F] border border-white/10 rounded-[32px] overflow-hidden shadow-[0_32px_128px_rgba(0,0,0,0.8)] animate-in zoom-in-95 fade-in duration-300">
-                        <div className="absolute top-0 right-0 p-6 z-10">
-                            <button
-                                onClick={() => setShowWorkspaceSelector(false)}
-                                className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors cursor-pointer"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+            {/* ── Sidebar ── */}
+            <aside className="relative z-20 hidden lg:flex flex-col w-[360px] shrink-0 border-r border-white/5 bg-[#0B0D14]/80 backdrop-blur-2xl">
+                {/* Brand / Logo */}
+                <div className="p-6 pb-2">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                            <Sparkles className="w-5 h-5 text-white" />
                         </div>
-
-                        <div className="p-10 space-y-8">
-                            <div className="text-center space-y-3">
-                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-                                    <Bot className="w-4 h-4 text-indigo-400" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Workspace Selection</span>
-                                </div>
-                                <h3 className="text-2xl font-black text-white">Select a Workspace to Preview</h3>
-                                <p className="text-slate-500 text-sm max-w-md mx-auto">Multiple workspaces are ready. Choose one to launch the simulator.</p>
-                            </div>
-
-                            <div className="grid gap-4">
-                                {workspaceReadiness.map((ws) => (
-                                    <button
-                                        key={ws.tenant.id}
-                                        onClick={() => selectWorkspace(ws)}
-                                        disabled={ws.status === "not_setup"}
-                                        className={cn(
-                                            "group relative w-full text-left p-6 rounded-2xl border transition-all duration-300",
-                                            ws.status === "ready"
-                                                ? "bg-[#0D1117] border-emerald-500/20 hover:border-emerald-500/50 hover:bg-[#0D1117]/80 cursor-pointer"
-                                                : ws.status === "partial"
-                                                    ? "bg-[#0D1117] border-amber-500/20 hover:border-amber-500/50 hover:bg-[#0D1117]/80 cursor-pointer"
-                                                    : "bg-[#0D1117]/50 border-white/5 opacity-50 cursor-not-allowed"
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                {getStatusIcon(ws.status)}
-                                                <div>
-                                                    <div className="flex items-center gap-3">
-                                                        <h4 className="font-bold text-white text-sm">{ws.tenant.name}</h4>
-                                                        <span className={cn("text-[10px] font-black uppercase tracking-widest", getStatusColor(ws.status))}>
-                                                            {getStatusLabel(ws.status)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-4 mt-1.5">
-                                                        <span className={cn("text-[11px] flex items-center gap-1.5", ws.hasApiKey ? "text-emerald-400" : "text-red-400")}>
-                                                            {ws.hasApiKey ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                                            API Key {ws.hasApiKey ? "Connected" : "Missing"}
-                                                        </span>
-                                                        <span className={cn("text-[11px] flex items-center gap-1.5", ws.hasBotConfig ? "text-emerald-400" : "text-red-400")}>
-                                                            {ws.hasBotConfig ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                                            Bot Config {ws.hasBotConfig ? "Configured" : "Missing"}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {ws.status !== "not_setup" && (
-                                                <div className="flex items-center gap-2 text-slate-400 group-hover:text-white transition-colors">
-                                                    <span className="text-xs font-bold uppercase tracking-wider">Preview Bot</span>
-                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
+                        <div>
+                            <h1 className="text-lg font-black text-white leading-none tracking-tight">RaKri Premium</h1>
+                            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-widest font-bold">AI Orchestration</p>
                         </div>
                     </div>
                 </div>
-            )}
 
-            <PageHeader
-                title="Bot Simulator"
-                description="Advanced Sandbox: Test your AI's personality and logic."
-                icon={MessageSquare}
-                gradient="from-indigo-600 to-blue-500"
-                howItWorks="The Bot Simulator is your playground to verify how your AI agent behaves before it goes live. You can switch between different workspaces, override configurations, and test voice interactions. Use the 'API Key' field to test premium features or specific integrations that require authentication. The preview refreshes instantly as you change settings."
-                actions={
-                    <div className="flex items-center gap-6">
-                        {/* Workspace Selector with Readiness Badges */}
-                        {selectedTenantId && tenants.length > 0 && (
-                            <div className="flex flex-col items-end">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 opacity-60">Active Workspace</span>
-                                <div className="relative flex items-center bg-[#13171F]/80 backdrop-blur-md border border-white/5 rounded-2xl shadow-2xl ring-1 ring-white/5 overflow-hidden group hover:border-white/10 transition-colors">
-                                    <div className="pl-4 py-2.5 flex items-center pointer-events-none absolute left-0 z-10">
-                                        {getStatusIcon(
-                                            workspaceReadiness.find(w => w.tenant.id === selectedTenantId)?.status || "not_setup"
-                                        )}
-                                    </div>
-                                    <select
-                                        className="appearance-none bg-transparent text-slate-200 font-bold py-2.5 pl-9 pr-10 focus:outline-none cursor-pointer min-w-[180px] z-20"
-                                        value={selectedTenantId}
-                                        onChange={(e) => {
-                                            const newTenantId = e.target.value;
-                                            const ws = workspaceReadiness.find(w => w.tenant.id === newTenantId);
-                                            setSelectedTenantId(newTenantId);
-                                            setIsTenantSubscribed(ws?.isSubscribed ?? null);
-                                            if (ws?.apiKey) {
-                                                updateApiKey(ws.apiKey);
-                                                setTempApiKey(ws.apiKey);
-                                                setKeyValidationState("valid");
-                                                setKeyValidationMessage("API Key Connected Successfully");
-                                            } else if (ws && !ws.hasApiKey) {
-                                                // Workspace has NO API key → show create modal
-                                                updateApiKey("");
-                                                setTempApiKey("");
-                                                setKeyValidationState("idle");
-                                                setKeyValidationMessage("");
-                                                setIsCreateApiKeyModalOpen(true);
-                                            } else {
-                                                // Workspace has API key but we don't have the full key → show paste modal
-                                                updateApiKey("");
-                                                setTempApiKey("");
-                                                setKeyValidationState("idle");
-                                                setKeyValidationMessage("");
-                                                setIsKeyModalOpen(true);
-                                            }
-                                            localStorage.setItem("simulator_last_workspace", newTenantId);
-                                        }}
-                                    >
-                                        {tenants.map(t => {
-                                            const ws = workspaceReadiness.find(w => w.tenant.id === t.id);
-                                            const badge = ws ? ` • ${getStatusLabel(ws.status)}` : "";
-                                            return (
-                                                <option key={t.id} value={t.id} className="bg-[#13171F] text-slate-200 py-1">
-                                                    {t.name}{badge}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
-                                    <div className="absolute right-3 pointer-events-none z-10">
-                                        <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-200 transition-colors" />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* API Key Input with Validation Feedback */}
-                        <div className="flex flex-col items-end group">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 opacity-60 flex items-center gap-2">
-                                API Key Override
-                                {keyValidationState === "valid" && (
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                                )}
-                                {keyValidationState === "invalid" && (
-                                    <XCircle className="w-3 h-3 text-red-400" />
-                                )}
-                            </span>
-                            <div className="relative flex items-center">
-                                <Zap className={cn(
-                                    "absolute left-3 w-3.5 h-3.5 transition-all duration-500",
-                                    keyValidationState === "valid"
-                                        ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-                                        : keyValidationState === "invalid"
-                                            ? "text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-                                            : apiKey
-                                                ? "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]"
-                                                : "text-slate-600"
-                                )} />
-                                <input
-                                    id="api-key-header-input"
-                                    type="password"
-                                    placeholder="sk_test_..."
-                                    value={apiKey}
-                                    onFocus={handleApiKeyLinkClick}
-                                    readOnly
-                                    className={cn(
-                                        "bg-[#13171F]/80 backdrop-blur-md border rounded-2xl py-2.5 pl-9 pr-4 text-xs font-mono text-slate-200 placeholder:text-slate-700 focus:outline-none transition-all min-w-[200px] cursor-pointer",
-                                        keyValidationState === "valid"
-                                            ? "border-emerald-500/30 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
-                                            : keyValidationState === "invalid"
-                                                ? "border-red-500/30 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
-                                                : "border-white/5 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/32"
-                                    )}
-                                />
-                                {keyValidationState === "validating" && (
-                                    <Loader2 className="absolute right-3 w-3.5 h-3.5 text-indigo-400 animate-spin" />
-                                )}
-                                {keyValidationState === "valid" && (
-                                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                )}
-                                {keyValidationState === "invalid" && (
-                                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                                )}
-                            </div>
-                            {/* Validation message tooltip */}
-                            {keyValidationMessage && (
-                                <span className={cn(
-                                    "text-[9px] mt-1 font-bold uppercase tracking-widest transition-all",
-                                    keyValidationState === "valid" ? "text-emerald-400" :
-                                        keyValidationState === "invalid" ? "text-red-400" :
-                                            "text-slate-500"
-                                )}>
-                                    {keyValidationState === "valid" && "✅ "}{keyValidationState === "invalid" && "❌ "}{keyValidationMessage}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                }
-            />
-
-            {/* API Key Modal */}
-            {isKeyModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
-                        onClick={() => setIsKeyModalOpen(false)}
-                    />
-                    <div className="relative w-full max-w-md bg-[#13171F] border border-white/10 rounded-[32px] overflow-hidden shadow-[0_32px_128px_rgba(0,0,0,0.8)] animate-in zoom-in-95 fade-in duration-300">
-                        <div className="absolute top-0 right-0 p-6">
+                {/* Tabs */}
+                <div className="px-4 py-4">
+                    <div className="flex p-1 bg-white/5 rounded-2xl gap-1">
+                        {([
+                            { id: "intro", label: "Overview", icon: Zap },
+                            { id: "config", label: "Settings", icon: Settings },
+                            { id: "voice", label: "Audio", icon: Mic },
+                        ] as const).map(tab => (
                             <button
-                                onClick={() => setIsKeyModalOpen(false)}
-                                className="p-2 hover:bg-white/5 rounded-full text-slate-500 hover:text-white transition-colors cursor-pointer"
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 flex-1 justify-center cursor-pointer",
+                                    activeTab === tab.id
+                                        ? "bg-white/10 text-white shadow-xl border border-white/10"
+                                        : "text-slate-500 hover:text-slate-300 hover:bg-white/2"
+                                )}
                             >
-                                <X className="w-5 h-5" />
+                                <tab.icon className="w-3.5 h-3.5" />
+                                {tab.label}
                             </button>
-                        </div>
+                        ))}
+                    </div>
+                </div>
 
-                        <div className="p-10 space-y-8">
-                            <div className="flex flex-col items-center text-center gap-4">
-                                <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 flex items-center justify-center relative">
-                                    <Zap className="w-8 h-8 text-indigo-400 drop-shadow-[0_0_12px_rgba(129,140,248,0.5)]" />
-                                    <div className="absolute -inset-2 bg-indigo-500/10 rounded-full blur-xl animate-pulse" />
-                                </div>
-                                <div>
-                                    <h3 className="text-2xl font-black text-white uppercase tracking-tight">Access Protocol</h3>
-                                    <p className="text-slate-500 text-sm mt-1">Configure your AI agent's secure key.</p>
-                                </div>
+                {/* Sidebar Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-2 space-y-8 custom-scrollbar">
+                    {activeTab === "intro" && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Workspace Status</h3>
+                                {selectedTenantId && tenants.length > 0 && (
+                                    <div className="relative group">
+                                        <div className="absolute -inset-px bg-gradient-to-r from-indigo-500/50 to-purple-500/50 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-500" />
+                                        <div className="relative bg-[#0D1117] border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <StatusDot status={workspaceReadiness.find(w => w.tenant.id === selectedTenantId)?.status ?? "not_setup"} />
+                                                <select
+                                                    className="appearance-none bg-transparent text-white text-sm font-bold focus:outline-none cursor-pointer pr-8 outline-none border-none"
+                                                    value={selectedTenantId}
+                                                    onChange={e => {
+                                                        const id = e.target.value;
+                                                        const ws = workspaceReadiness.find(w => w.tenant.id === id);
+                                                        setSelectedTenantId(id);
+                                                        setIsTenantSubscribed(ws?.isSubscribed ?? null);
+                                                        if (ws?.apiKey) { updateApiKey(ws.apiKey); setTempApiKey(ws.apiKey); setKeyValidationState("valid"); }
+                                                        localStorage.setItem("simulator_last_workspace", id);
+                                                    }}
+                                                >
+                                                    {tenants.map(t => <option key={t.id} value={t.id} className="bg-[#0D1117]">{t.name}</option>)}
+                                                </select>
+                                                <ChevronDown className="absolute right-4 w-4 h-4 text-slate-500 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-4">
-                                <div className="relative group">
-                                    <label className="text-[10px] font-black text-indigo-500 uppercase tracking-widest pl-1 mb-2 block">Secret API Key</label>
-                                    <div className="relative">
-                                        <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 transition-colors group-focus-within:text-amber-400" />
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            placeholder="sk_live_..."
-                                            value={tempApiKey}
-                                            onChange={(e) => setTempApiKey(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && (setKeyValidationState("idle"), updateApiKey(tempApiKey), setIsKeyModalOpen(false))}
-                                            className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-mono text-slate-200 placeholder:text-slate-800 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all shadow-inner"
-                                        />
+                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Connection</h3>
+                                <button
+                                    onClick={handleApiKeyModalOpen}
+                                    className={cn(
+                                        "w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group cursor-pointer",
+                                        keyValidationState === "valid"
+                                            ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
+                                            : "bg-white/5 border-white/10 text-slate-400 hover:border-indigo-500/30 hover:text-white"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {keyValidationState === "valid" ? <CheckCircle2 className="w-4 h-4" /> : <Key className="w-4 h-4" />}
+                                        <span className="text-sm font-bold">{keyValidationState === "valid" ? "Verified Key" : "Connect API Key"}</span>
                                     </div>
-                                    <p className="text-[10px] text-slate-500 italic mt-2 px-1">This key will be cached locally on your machine.</p>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <button
-                                    onClick={() => {
-                                        setKeyValidationState("idle"); // Force re-validation
-                                        updateApiKey(tempApiKey);
-                                        setIsKeyModalOpen(false);
-                                    }}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl py-4 font-black text-sm uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 cursor-pointer"
-                                >
-                                    Synchronize Agent
-                                </button>
-                                <button
-                                    onClick={() => setIsKeyModalOpen(false)}
-                                    className="w-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-2xl py-4 font-bold text-sm transition-all cursor-pointer"
-                                >
-                                    Dismiss
+                                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
-            {/* Create API Key Modal */}
-            <CreateApiKeyModal
-                isOpen={isCreateApiKeyModalOpen}
-                onClose={(createdKey) => {
-                    setIsCreateApiKeyModalOpen(false);
-                    if (createdKey) {
-                        // Auto-fill the created key into the simulator
-                        setKeyValidationState("idle"); // Force re-validation
-                        updateApiKey(createdKey);
-                        setTempApiKey(createdKey);
-                    }
-                }}
-                onSuccess={(createdKey) => {
-                    if (createdKey) {
-                        // Key was just created — it will be used when modal closes
-                    }
-                }}
-                initialTenantId={selectedTenantId}
-            />
-
-            {/* Task Tabs */}
-            <div className="flex gap-4 mb-2 animate-in fade-in duration-1000 delay-300">
-                {tasks.map((task) => (
-                    <button
-                        key={task.id}
-                        onClick={() => setActiveTask(task.id as any)}
-                        className={cn(
-                            "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all duration-300 cursor-pointer border transform active:scale-95",
-                            activeTask === task.id
-                                ? "bg-indigo-600 border-indigo-500 text-white shadow-[0_10px_25px_-5px_rgba(79,70,229,0.5)] ring-2 ring-indigo-500/20"
-                                : "bg-[#13171F]/50 border-slate-800 text-slate-500 hover:bg-[#1a1f29] hover:text-slate-200 hover:border-slate-700 backdrop-blur-sm"
-                        )}
-                    >
-                        <task.icon className={cn("w-4 h-4 transition-colors", activeTask === task.id ? "text-white" : "text-slate-600")} />
-                        {task.title}
-                    </button>
-                ))}
-            </div>
-
-            {/* Split Layout */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-8 min-h-0 relative z-10 animate-in fade-in slide-in-from-bottom duration-1000 delay-500 pb-10 lg:pb-0">
-                {/* Left Panel: Tasks/Config Content */}
-                <div className="w-full lg:w-1/2 flex flex-col gap-6 overflow-y-auto lg:pr-2 custom-scrollbar text-white shrink-0">
-                    {activeTask === "intro" && (
-                        <div className="min-h-full">
-                            {apiKey && selectedTenantId ? (
-                                <div className="space-y-8 animate-in fade-in duration-500">
-                                    <div className="space-y-4">
-                                        <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">
-                                            Bot Connected
+                            {apiKey && (
+                                <div className="space-y-4 pt-2">
+                                    <div className="p-5 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 space-y-4">
+                                        <div>
+                                            <h4 className="text-xs font-black text-white uppercase tracking-wider">Embed Snippet</h4>
+                                            <p className="text-[11px] text-slate-400 mt-1">Ready to go live? Copy the code below.</p>
                                         </div>
-                                        <h2 className="text-4xl font-black mb-2 leading-[1.15] text-white">
-                                            Your Widget is <br />
-                                            <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">Ready to Deploy.</span>
-                                        </h2>
-                                        <p className="text-slate-400 text-base leading-relaxed max-w-lg">
-                                            Ensure your API key is updated to enable widget functionality. Once configured, copy the integration snippet below and paste it into your website&apos;s header or footer to launch your AI assistant.
-                                        </p>
-                                    </div>
-
-                                    <div className="bg-[#13171F]/80 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 shadow-2xl relative group/snippet">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Production Snippet</span>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={handleCopySnippet}
-                                                className="h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all gap-2"
-                                            >
-                                                {isSnippetCopied ? (
-                                                    <>
-                                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Copied</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Copy className="w-3.5 h-3.5" />
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest cursor-pointer">Copy Code</span>
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-
                                         <div className="relative group">
-                                            <div className="absolute -inset-2 bg-indigo-500/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            <pre className="relative bg-black/40 text-indigo-300 p-6 rounded-2xl overflow-x-auto text-[13px] font-mono leading-relaxed border border-white/5 custom-scrollbar">
-                                                {getIntegrationSnippet()}
+                                            <pre className="bg-black/60 p-4 rounded-xl text-[10px] font-mono text-indigo-300 overflow-x-auto border border-white/5 whitespace-pre-wrap">
+                                                {getSnippet()}
                                             </pre>
+                                            <button
+                                                onClick={handleCopySnippet}
+                                                className="absolute top-2 right-2 p-2 bg-indigo-600/80 hover:bg-indigo-500 rounded-lg text-white transition-all opacity-0 group-hover:opacity-100 shadow-lg cursor-pointer"
+                                            >
+                                                {isSnippetCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                            </button>
                                         </div>
-
-                                        <p className="text-[10px] text-slate-600 mt-4 flex items-center gap-2 justify-center">
-                                            <AlertTriangle className="w-3 h-3" />
-                                            Active API Key: {apiKey.slice(0, 8)}...{apiKey.slice(-4)}
-                                        </p>
-                                    </div>
-
-                                    <div className="pt-2">
-                                        <button
-                                            onClick={() => setActiveTask("config")}
-                                            className="text-sm font-bold text-slate-500 hover:text-white transition-colors flex items-center gap-2 group/link"
-                                        >
-                                            Want to customize colors and personality?
-                                            <span className="text-indigo-400 flex items-center gap-1 group-hover/link:translate-x-1 transition-transform">
-                                                Go to Bot Config <ArrowRight className="w-3.5 h-3.5" />
-                                            </span>
-                                        </button>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="bg-gradient-to-br from-[#13171F] to-[#0D1117] rounded-[32px] border border-white/5 p-10 flex flex-col relative shadow-2xl group min-h-full">
-                                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] group-hover:bg-indigo-500/20 transition-colors duration-700" />
+                            )}
 
-                                    <div className="relative z-10 flex flex-col gap-8">
-                                        <div className="space-y-6 text-white text-left">
-                                            <div className="inline-block px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
-                                                Getting Started
-                                            </div>
-                                            <h2 className="text-4xl font-black mb-2 leading-[1.15] text-white">
-                                                Activate Your <br />
-                                                <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">AI Sandbox.</span>
-                                            </h2>
-                                            <p className="text-slate-400 text-base leading-relaxed max-w-lg">
-                                                To begin testing, you first need to provide an <button onClick={handleApiKeyLinkClick} className="text-indigo-400 font-bold border-b border-indigo-500/30 pb-0.5 hover:text-indigo-300 hover:border-indigo-400 transition-all cursor-pointer">API Key</button>. This key connects the simulator to your unique AI agent&apos;s logic and knowledge base.
-                                            </p>
-                                            <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
-                                                Once connected, head over to <span className="text-purple-400 font-bold">Bot Config</span> to fine-tune your widget&apos;s appearance, colors, and personality in real-time.
-                                            </p>
-
-                                            {!apiKey && (
-                                                <div className="pt-4">
-                                                    <button
-                                                        onClick={handleApiKeyLinkClick}
-                                                        className="group/btn relative px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-500/20 flex items-center gap-2"
-                                                    >
-                                                        Initialize with API Key
-                                                        <Zap className="w-4 h-4 animate-pulse" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="group/item relative">
-                                                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl opacity-0 group-hover/item:opacity-75 blur transition duration-500"></div>
-                                                <div className="relative flex flex-col gap-3 p-5 rounded-2xl bg-[#13171F] border border-white/5 group-hover/item:border-transparent transition-all">
-                                                    <div className="w-8 h-8 flex items-center justify-center bg-indigo-500/20 rounded-lg group-hover/item:bg-indigo-500/30 transition-colors">
-                                                        <Zap className="w-4 h-4 text-indigo-400 group-hover/item:text-indigo-300" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-bold text-slate-100 group-hover/item:text-white transition-colors text-left text-sm">Instant Preview</h4>
-                                                        <p className="text-[11px] text-slate-400 leading-relaxed group-hover/item:text-slate-300 transition-colors text-left">Watch the widget update instantly as you change your configuration.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="group/item relative">
-                                                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl opacity-0 group-hover/item:opacity-75 blur transition duration-500"></div>
-                                                <div className="relative flex flex-col gap-3 p-5 rounded-2xl bg-[#13171F] border border-white/5 group-hover/item:border-transparent transition-all shadow-xl">
-                                                    <div className="w-8 h-8 flex items-center justify-center bg-purple-500/20 rounded-lg group-hover/item:bg-purple-500/30 transition-colors">
-                                                        <Layout className="w-4 h-4 text-purple-400 group-hover/item:text-purple-300" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-bold text-slate-100 group-hover/item:text-white transition-colors text-left text-sm">Adaptive Config</h4>
-                                                        <p className="text-[11px] text-slate-400 leading-relaxed group-hover/item:text-slate-300 transition-colors text-left">Toggle through layout styles and AI personality settings on the fly.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                            {!apiKey && (
+                                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                                        <Zap className="w-4 h-4 text-indigo-400" />
                                     </div>
+                                    <h4 className="text-sm font-bold text-white">Getting Started</h4>
+                                    <p className="text-xs text-slate-500 leading-relaxed">Connect your API key to sync this preview with your actual bot configurations.</p>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {activeTask === "config" && selectedTenantId && (
-                        <div className="space-y-6">
-                            {!apiKey ? (
-                                <div className="bg-[#13171F]/50 backdrop-blur-xl p-12 rounded-[32px] border border-dashed border-white/10 flex flex-col items-center justify-center text-center gap-4">
-                                    <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center">
-                                        <Zap className="w-8 h-8 text-slate-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-bold text-white">Config Locked</h3>
-                                        <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto">Please enter your API Key first to enable dynamic configuration of your chatbot.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setIsKeyModalOpen(true)}
-                                        className="mt-4 px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                                    >
-                                        Configure API Key
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="bg-[#13171F]/80 backdrop-blur-xl p-2 rounded-[32px] border border-white/5 shadow-2xl">
-                                    <ChatBotConfig
-                                        tenantId={selectedTenantId}
-                                        apiKey={apiKey}
-                                        onApiKeyChange={(key) => {
-                                            updateApiKey(key);
-                                            setTempApiKey(key);
-                                        }}
-                                        onSaveSuccess={() => setRefreshKey(prev => prev + 1)}
-                                    />
-                                </div>
-                            )}
+                    {activeTab === "config" && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+                             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Appearance</h3>
+                             <p className="text-xs text-slate-500 leading-relaxed">Appearance settings are managed globally. Head to the Chatbot dashboard to update colors and branding.</p>
+                             <Button asChild className="w-full bg-white text-[#080A10] hover:bg-slate-200 rounded-xl font-bold py-6">
+                                <a href="/pages/chatbot" className="flex items-center gap-2">
+                                    <Settings className="w-4 h-4" />
+                                    Manage Chatbot
+                                </a>
+                             </Button>
                         </div>
                     )}
 
-                    {activeTask === "voice" && (
-                        <div className="bg-gradient-to-br from-[#13171F] to-[#0D1117] rounded-[32px] border border-white/5 p-12 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-2xl flex-1 min-h-[400px]">
-                            <div className="absolute inset-0 bg-indigo-500/5 pointer-events-none"></div>
-                            <div className="bg-indigo-500/10 p-8 rounded-full mb-8 relative">
-                                <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping opacity-20"></div>
-                                <Zap className="w-20 h-20 text-indigo-400" />
+                    {activeTab === "voice" && (
+                        <div className="flex flex-col items-center text-center gap-6 py-12 animate-in fade-in slide-in-from-left-4 duration-500">
+                            <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center animate-pulse">
+                                <Mic className="w-7 h-7 text-indigo-400" />
                             </div>
-                            <h2 className="text-4xl font-black mb-4">Voice AI <span className="text-indigo-400">Pipeline</span></h2>
-                            <p className="text-slate-400 text-lg max-w-sm font-medium">
-                                We&apos;re finishing up the voice interface. You&apos;ll soon be able to talk directly to your customized assistant.
-                            </p>
-                            <div className="mt-8 flex gap-2">
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="w-2 h-8 bg-indigo-500/30 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }}></div>
-                                ))}
+                            <div>
+                                <h4 className="text-lg font-bold text-white">Voice Pipeline</h4>
+                                <p className="text-xs text-slate-500 mt-2 leading-relaxed px-4">Interactive voice conversations are in early access. Stay tuned for updates.</p>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Right Panel: The Simulator Iframe */}
-                <div className="w-full lg:w-1/2 min-h-[550px] bg-[#0D1117] rounded-[32px] border border-white/5 overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10 group transition-all duration-700">
-                    {/* Simulated Browser Bar */}
-                    <div className="h-8 bg-[#13171F] border-b border-white/5 flex items-center px-4 gap-1.5 shrink-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/40"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40"></div>
-                        <div className="mx-auto bg-black/30 rounded-full px-4 py-0.5 text-[10px] text-slate-600 font-mono w-48 text-center truncate">
-                            {apiKey ? `simulator://${apiKey.slice(0, 8)}...` : "waiting for connection..."}
+                {/* Footer fixed */}
+                <div className="p-6 border-t border-white/5">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/3 border border-white/5">
+                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
+                             {user?.email?.[0]?.toUpperCase() ?? "U"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-white truncate">{user?.email ?? "Guest User"}</p>
+                            <p className="text-[10px] text-slate-500">Developer Cloud</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            {/* ── Main Chat Interface ── */}
+            <main className="flex-1 flex flex-col min-h-0 bg-[#05060B] relative overflow-hidden">
+                {/* Subtle Grid / Noise */}
+                <div className="absolute inset-0 scifi-grid opacity-[0.03] pointer-events-none" />
+                <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />
+
+                {/* Header */}
+                <header className="relative z-30 h-16 border-b border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-between px-8">
+                    <div className="flex items-center gap-4">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center p-0.5">
+                            <div className="w-full h-full rounded-full bg-[#05060B] flex items-center justify-center overflow-hidden uppercase font-black text-[10px] text-indigo-400">
+                                {chatbotConfig?.name?.[0] || <Bot className="w-5 h-5" />}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-sm font-black text-white tracking-tight">{chatbotConfig?.name || "RaKri AI Assistant"}</h2>
+                                <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Active</span>
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-slate-500 font-medium">Internal Performance Sandbox</p>
                         </div>
                     </div>
 
-                    {/* Scenario C: No workspace ready — Guided Onboarding, NOT "Chatbot Not Found" */}
-                    {!apiKey ? (
-                        <div className="absolute inset-0 top-8 bg-[#0D1117] z-30 overflow-y-auto custom-scrollbar">
-                            <div className="flex flex-col items-center justify-center min-h-full p-8 sm:p-12 text-center pb-20">
-                                <div className="relative mb-8">
-                                    <div className="absolute -inset-6 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
-                                    <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center">
-                                        <Bot className="w-10 h-10 text-indigo-400" />
+                    <div className="flex items-center gap-3">
+                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-400">
+                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                             Strategy Engine
+                         </div>
+                         <button
+                            onClick={() => window.location.reload()}
+                            className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all cursor-pointer"
+                         >
+                            <RefreshCw className="w-4 h-4" />
+                         </button>
+                    </div>
+                </header>
+
+                {/* Messages Area */}
+                <div className="relative z-10 flex-1 overflow-y-auto px-6 py-8 custom-scrollbar">
+                    <div className="max-w-4xl mx-auto space-y-8">
+                        {chatMessages.map((msg, idx) => (
+                            <div key={idx} className="space-y-3">
+                                <div
+                                    className={cn(
+                                        "flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500",
+                                        msg.role === "user" ? "flex-row-reverse" : "flex-row"
+                                    )}
+                                >
+                                    {/* Avatar - perfectly aligned to top */}
+                                    <div className={cn(
+                                        "w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 shadow-lg transition-transform hover:rotate-12 mt-0.5",
+                                        msg.role === "bot"
+                                            ? "bg-slate-900 border border-white/10"
+                                            : "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-indigo-500/20"
+                                    )}>
+                                        {msg.role === "bot" ? <Bot className="w-5 h-5 text-indigo-400" /> : <User className="w-5 h-5" />}
+                                    </div>
+
+                                    {/* Bubble - limited width for better readability */}
+                                    <div className={cn(
+                                        "max-w-[75%] px-5 py-4 rounded-3xl text-sm leading-relaxed shadow-2xl transition-all whitespace-pre-wrap",
+                                        msg.role === "bot"
+                                            ? "bg-[#13171F]/90 border border-white/10 text-slate-200 rounded-tl-sm backdrop-blur-md"
+                                            : "bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-tr-sm shadow-indigo-500/20 font-medium"
+                                    )}>
+                                        {msg.text.split("\n\n").map((part, i) => (
+                                            <div key={i} className={cn(i > 0 && "mt-3")}>
+                                                {part.split("\n").map((line, j) => (
+                                                    <div key={j} className={cn(line.startsWith("•") && "pl-4 -indent-4")}>
+                                                        {line.split("**").map((text, k) => (
+                                                            k % 2 === 1 ? <strong key={k} className="text-white font-black">{text}</strong> : text
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">
-                                    {readyCount === 0 ? "No Active AI Sandbox Found" : "Simulator Offline"}
-                                </h3>
-
-                                {readyCount === 0 ? (
-                                    <div className="space-y-6 max-w-[280px]">
-                                        <p className="text-slate-500 text-sm leading-relaxed">
-                                            Complete these steps to launch your bot preview:
-                                        </p>
-
-                                        {/* Guided Steps */}
-                                        <div className="space-y-3 text-left">
-                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                                                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                                    <span className="text-[10px] font-black text-indigo-400">1</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-xs font-bold text-white">Add API Key</span>
-                                                    <p className="text-[10px] text-slate-500">Connect your workspace to the simulator</p>
-                                                </div>
-                                                {workspaceReadiness.some(w => w.hasApiKey)
-                                                    ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
-                                                    : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
-                                                }
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                                                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                                    <span className="text-[10px] font-black text-indigo-400">2</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-xs font-bold text-white">Configure Bot</span>
-                                                    <p className="text-[10px] text-slate-500">Set up appearance and behavior</p>
-                                                </div>
-                                                {workspaceReadiness.some(w => w.hasBotConfig)
-                                                    ? <CheckCircle2 className="w-4 h-4 text-emerald-400 ml-auto shrink-0" />
-                                                    : <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
-                                                }
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
-                                                <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                                    <span className="text-[10px] font-black text-indigo-400">3</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-xs font-bold text-white">Start Preview</span>
-                                                    <p className="text-[10px] text-slate-500">Watch your bot come alive</p>
-                                                </div>
-                                                <div className="w-4 h-4 rounded-full border border-white/10 ml-auto shrink-0" />
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={handleApiKeyLinkClick}
-                                            className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
-                                        >
-                                            <Key className="w-4 h-4" />
-                                            Connect API Key
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <p className="text-slate-400 text-sm max-w-[240px] leading-relaxed">
-                                            Enter your <span className="text-indigo-400 font-bold">API Key</span> at the top right to initialize the live preview.
-                                        </p>
-                                        <div className="mt-4 flex gap-2 justify-center">
-                                            <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse"></div>
-                                            <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-75"></div>
-                                            <div className="w-1 h-1 rounded-full bg-slate-700 animate-pulse delay-150"></div>
-                                        </div>
+                                {/* Quick Actions */}
+                                {idx === 0 && msg.role === "bot" && (
+                                    <div className="flex flex-wrap gap-2 ml-13 pt-1 animate-in fade-in slide-in-from-left-4 delay-300 duration-700">
+                                        {QUICK_ACTIONS.filter(a => !a.hiddenFromStart).map(action => (
+                                            <button
+                                                key={action.label}
+                                                onClick={() => handleQuickAction(action)}
+                                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:border-indigo-500/50 hover:bg-white/10 transition-all text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer active:scale-95 shadow-lg group"
+                                            >
+                                                <action.icon className="w-3 h-3 text-indigo-400 group-hover:scale-125 transition-transform" />
+                                                {action.label}
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    ) : keyValidationState === "validating" ? (
-                        <div className="absolute inset-0 top-8 flex items-center justify-center bg-[#0D1117] z-30">
-                            <div className="flex flex-col items-center gap-6">
-                                <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
-                                <div className="text-slate-400 text-sm font-bold animate-pulse uppercase tracking-widest">Validating API Key…</div>
-                            </div>
-                        </div>
-                    ) : keyValidationState === "invalid" ? (
-                        <div className="absolute inset-0 top-8 flex flex-col items-center justify-center bg-[#0D1117] z-30 p-12 text-center">
-                            <div className="relative mb-6">
-                                <div className="absolute -inset-6 bg-red-500/10 rounded-full blur-3xl animate-pulse" />
-                                <div className="relative w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                                    <XCircle className="w-8 h-8 text-red-400" />
+                        ))}
+
+                        {isBotTyping && (
+                            <div className="flex items-start gap-4 animate-in fade-in duration-300">
+                                <div className="w-9 h-9 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
+                                    <Bot className="w-5 h-5 text-indigo-400" />
                                 </div>
-                            </div>
-                            <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">Invalid API Key</h3>
-                            <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed mb-6">
-                                The API key could not be validated. Please check it and try again.
-                            </p>
-                            <button
-                                onClick={handleApiKeyLinkClick}
-                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2"
-                            >
-                                <Key className="w-4 h-4" />
-                                Update API Key
-                            </button>
-                        </div>
-                    ) : isLoadingTenants ? (
-                        <div className="absolute inset-0 top-8 flex items-center justify-center bg-[#0D1117] z-30">
-                            <div className="flex flex-col items-center gap-6">
-                                <Loader2 className="h-12 w-12 animate-spin text-indigo-500" />
-                                <div className="text-slate-400 text-sm font-bold animate-pulse uppercase tracking-widest">Waking up Agent...</div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="relative w-full h-full">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#13171F_0%,#0A0C12_100%)]" />
-
-                            {isTenantSubscribed === false ? (
-                                <div className="absolute inset-0 z-40 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-500">
-                                    <div className="min-h-full flex flex-col items-center justify-center gap-6 px-6 sm:px-12 text-center py-12 sm:py-16 relative">
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] pointer-events-none" />
-
-                                        <div className="relative group shrink-0">
-                                            <div className="absolute -inset-8 rounded-full blur-[60px] opacity-20 bg-orange-500 animate-pulse"></div>
-                                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-slate-900 to-slate-800 border-2 border-white/10 flex items-center justify-center shadow-2xl">
-                                                <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-orange-500 animate-bounce" />
-                                            </div>
+                                <div className="bg-[#13171F]/90 border border-white/10 px-6 py-4 rounded-3xl rounded-tl-sm flex flex-col gap-2 shadow-xl backdrop-blur-md">
+                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                        <div className="flex gap-1">
+                                            {[0, 0.2, 0.4].map(d => (
+                                                <div key={d} className="w-1 h-1 rounded-full bg-indigo-500/50 animate-bounce" style={{ animationDelay: `${d}s` }} />
+                                            ))}
                                         </div>
-
-                                        <div className="space-y-4 sm:space-y-6 max-w-sm sm:max-w-md mx-auto z-10">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 mb-2">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Access Restricted</span>
-                                            </div>
-                                            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-none uppercase">
-                                                Premium <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Locked</span>
-                                            </h3>
-                                            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                                                This <strong className="text-white">Simulator Hub</strong> requires an active premium subscription to initialize neural protocols.
-                                            </p>
-                                            <div className="pt-2 sm:pt-4 flex flex-col gap-3 w-full">
-                                                <Button
-                                                    asChild
-                                                    className="w-full py-5 sm:py-6 bg-white text-[#0A0C12] hover:bg-slate-100 rounded-2xl font-black shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2"
-                                                >
-                                                    <a href="/pages/billing">
-                                                        Upgrade Now <ArrowRight className="w-4 h-4" />
-                                                    </a>
-                                                </Button>
-                                                {/* <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest truncate">Bot ID: {selectedTenantId?.slice(0, 8)}...{selectedTenantId?.slice(-4)}</p> */}
-                                            </div>
-                                        </div>
+                                        {chatbotConfig?.name || "RaKri AI"} is analyzing...
                                     </div>
                                 </div>
-                            ) : (
-                                <iframe
-                                    key={apiKey + refreshKey + selectedTenantId}
-                                    srcDoc={`
-                                        <!DOCTYPE html>
-                                        <html>
-                                          <head>
-                                            <meta charset="utf-8">
-                                            <meta name="viewport" content="width=device-width, initial-scale=1">
-                                            <style>
-                                              body { margin: 0; background: transparent; overflow: hidden; }
-                                            </style>
-                                            <script 
-                                              src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js" 
-                                              data-api-key="${apiKey}"
-                                              ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ''}
-                                              async>
-                                            </script>
-                                          </head>
-                                          <body></body>
-                                        </html>
-                                    `}
-                                    className="w-full h-full border-0 relative z-10"
-                                    title="Chatbot Simulator"
-                                />
-                            )}
-                        </div>
-                    )}
+                            </div>
+                        )}
+                        <div ref={chatEndRef} />
+                    </div>
                 </div>
-            </div>
+
+                {/* Input Section */}
+                <footer className="relative z-30 p-8 pt-0 mt-auto">
+                    <div className="max-w-3xl mx-auto w-full space-y-6">
+                        {/* Spacer to prevent input being too close to chat */}
+                        <div className="h-2" />
+
+                        {/* Input Area */}
+                        <div className="relative group p-1 rounded-full bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent">
+                             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-full blur-xl opacity-0 group-focus-within:opacity-100 transition duration-700" />
+                             <div className="relative bg-[#13171F]/90 backdrop-blur-3xl border border-white/10 rounded-full flex items-center p-1.5 group-focus-within:border-indigo-500/50 group-focus-within:bg-[#13171F] transition-all shadow-2xl">
+                                <input
+                                    type="text"
+                                    value={chatInput}
+                                    onChange={e => setChatInput(e.target.value)}
+                                    onKeyDown={e => e.key === "Enter" && handleChatSend()}
+                                    placeholder="Ask how AI can transform your business..."
+                                    className="flex-1 bg-transparent border-none focus:ring-0 px-6 py-4 text-sm text-white placeholder:text-slate-600 outline-none font-medium"
+                                />
+                                <button
+                                    onClick={() => handleChatSend()}
+                                    disabled={!chatInput.trim() || isBotTyping}
+                                    className={cn(
+                                        "p-3.5 rounded-full transition-all duration-300 flex items-center justify-center",
+                                        chatInput.trim() && !isBotTyping
+                                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 scale-100 hover:scale-110 active:scale-90 hover:bg-indigo-500 cursor-pointer"
+                                            : "bg-white/5 text-slate-600 scale-95"
+                                    )}
+                                >
+                                    <Send className="w-4 h-4" />
+                                </button>
+                             </div>
+                        </div>
+
+                        {/* Footer text */}
+                        <p className="text-[10px] text-center text-slate-600 font-medium">
+                            Premium AI Assistant Preview • Adaptive Context Architecture
+                        </p>
+                    </div>
+                </footer>
+            </main>
+
+            {/* ── Existing Modals ── */}
+            <Suspense fallback={null}>
+                {showWorkspaceSelector && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowWorkspaceSelector(false)} />
+                        <div className="relative w-full max-w-xl bg-[#0D1117] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+                             <div className="p-8 space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                                        <Bot className="w-6 h-6 text-indigo-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-white">Select Workspace</h3>
+                                        <p className="text-sm text-slate-500 font-medium">Choose a workspace to preview</p>
+                                    </div>
+                                </div>
+                                <div className="grid gap-3">
+                                    {workspaceReadiness.map(ws => (
+                                        <button
+                                            key={ws.tenant.id}
+                                            onClick={() => {
+                                                setSelectedTenantId(ws.tenant.id);
+                                                setIsTenantSubscribed(ws.isSubscribed);
+                                                if (ws.apiKey) { updateApiKey(ws.apiKey); setTempApiKey(ws.apiKey); setKeyValidationState("valid"); }
+                                                localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+                                                setShowWorkspaceSelector(false);
+                                            }}
+                                            className="group w-full text-left p-5 rounded-2xl border border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-4 cursor-pointer"
+                                        >
+                                             <StatusDot status={ws.status} />
+                                             <div className="flex-1">
+                                                 <p className="font-bold text-white text-sm">{ws.tenant.name}</p>
+                                                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mt-1">Ready</p>
+                                             </div>
+                                             <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                        </button>
+                                    ))}
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {isKeyModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in zoom-in-95 fade-in duration-300">
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setIsKeyModalOpen(false)} />
+                        <div className="relative w-full max-w-md bg-[#0D1117] border border-white/10 rounded-3xl shadow-2xl p-8 space-y-8">
+                             <div className="flex flex-col items-center text-center gap-4">
+                                <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                                    <Key className="w-8 h-8 text-indigo-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-white tracking-tight">Access Control</h3>
+                                    <p className="text-slate-500 text-sm font-medium mt-2">Enter your Production API Key</p>
+                                </div>
+                             </div>
+                             <div className="space-y-4">
+                                <div className="relative group">
+                                    <Zap className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-indigo-400 transition-colors" />
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="sk_live_..."
+                                        value={tempApiKey}
+                                        onChange={e => setTempApiKey(e.target.value)}
+                                        onKeyDown={e => e.key === "Enter" && (setKeyValidationState("idle"), updateApiKey(tempApiKey), setIsKeyModalOpen(false))}
+                                        className="w-full bg-black/60 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-sm font-mono text-white placeholder:text-slate-700 outline-none focus:border-indigo-500/50 transition-all shadow-inner"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={() => { setKeyValidationState("idle"); updateApiKey(tempApiKey); setIsKeyModalOpen(false); }}
+                                        className="w-full bg-white text-[#080A10] hover:bg-slate-200 rounded-2xl py-4 font-black uppercase tracking-widest text-xs transition-all shadow-xl cursor-pointer"
+                                    >
+                                        Authorize Agent
+                                    </button>
+                                    <button onClick={() => setIsKeyModalOpen(false)} className="w-full bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white rounded-2xl py-4 font-bold text-xs transition-all cursor-pointer">
+                                        Cancel
+                                    </button>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+
+                <CreateApiKeyModal
+                    isOpen={isCreateApiKeyModalOpen}
+                    onClose={(createdKey) => {
+                        setIsCreateApiKeyModalOpen(false);
+                        if (createdKey) { setKeyValidationState("idle"); updateApiKey(createdKey); setTempApiKey(createdKey); }
+                    }}
+                    onSuccess={() => {}}
+                    initialTenantId={selectedTenantId}
+                />
+            </Suspense>
         </div>
     );
 }
@@ -1104,7 +726,7 @@ function PreviewBotContent() {
 export default function PreviewBotPage() {
     return (
         <Suspense fallback={
-            <div className="flex h-screen w-full items-center justify-center bg-[#0A0C12]">
+            <div className="flex h-full w-full items-center justify-center bg-[#080A10]">
                 <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
             </div>
         }>
