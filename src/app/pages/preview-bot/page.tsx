@@ -6,10 +6,11 @@ import { cn } from "@/lib/utils";
 import {
     Loader2, Sparkles, Layout, MessageSquare, Zap,
     ChevronDown, X, CheckCircle2, XCircle, AlertTriangle,
-    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check, Lock
+    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check, Lock,
+    Monitor, Smartphone, Maximize2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
+// import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
 import { ChatBotConfig } from "@/components/chatbot/chatbot-config";
 import { CreateApiKeyModal } from "@/components/api-keys/create-api-key-modal";
 import { PageHeader } from "@/components/shared/page-header";
@@ -57,6 +58,58 @@ function PreviewBotContent() {
     const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false);
     const [isAutoSelected, setIsAutoSelected] = useState(false);
     const [isTenantSubscribed, setIsTenantSubscribed] = useState<boolean | null>(null);
+    const [blobUrl, setBlobUrl] = useState<string>("");
+    const [viewMode, setViewMode] = useState<"auto" | "desktop" | "mobile">("auto");
+
+    // Generate Blob URL for simulator to resolve CORS/Origin null issues
+    useEffect(() => {
+        if (!apiKey) {
+            setBlobUrl("");
+            return;
+        }
+
+        const html = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chatbot Simulator</title>
+    <style>
+      html, body { height: 100% !important; width: 100% !important; margin: 0; padding: 0; background: transparent; overflow: visible !important; }
+      #simulator-status { position: fixed; top: 10px; left: 10px; color: rgba(255,255,255,0.1); font-family: monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; pointer-events: none; z-index: 999; }
+    </style>
+    <script 
+      src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js" 
+      data-api-key="${apiKey}"
+      ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ""}
+      async>
+    </script>
+    <script>
+      // Synthetic resize trigger to force layout calculations for the widget (mimics DevTools opening)
+      window.addEventListener('load', function() {
+        var delays = [100, 500, 1000, 2000];
+        delays.forEach(function(delay) {
+          setTimeout(function() {
+            window.dispatchEvent(new Event('resize'));
+          }, delay);
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="simulator-status">SIMULATOR_ACTIVE</div>
+  </body>
+</html>`;
+
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        setBlobUrl(url);
+
+        return () => {
+            URL.revokeObjectURL(url);
+        };
+    }, [apiKey, selectedTenantId, refreshKey]);
 
     // API Key validation
     const [keyValidationState, setKeyValidationState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
@@ -899,14 +952,53 @@ function PreviewBotContent() {
                 </div>
 
                 {/* Right Panel: The Simulator Iframe */}
-                <div className="w-full lg:w-1/2 min-h-[550px] bg-[#0D1117] rounded-[32px] border border-white/5 overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10 group transition-all duration-700">
+                <div className="w-full lg:w-1/2 flex-1 min-h-0 bg-[#0D1117] rounded-[32px] border border-white/5 overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10 group transition-all duration-700 flex flex-col">
                     {/* Simulated Browser Bar */}
-                    <div className="h-8 bg-[#13171F] border-b border-white/5 flex items-center px-4 gap-1.5 shrink-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/40"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40"></div>
-                        <div className="mx-auto bg-black/30 rounded-full px-4 py-0.5 text-[10px] text-slate-600 font-mono w-48 text-center truncate">
-                            {apiKey ? `simulator://${apiKey.slice(0, 8)}...` : "waiting for connection..."}
+                    <div className="h-8 bg-[#13171F] border-b border-white/5 flex items-center px-4 gap-3 shrink-0">
+                        <div className="flex items-center gap-1.5 grow-0">
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500/40"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40"></div>
+                        </div>
+                        
+                        <div className="grow flex justify-center">
+                            <div className="bg-black/30 rounded-full px-4 py-0.5 text-[10px] text-slate-600 font-mono w-48 text-center truncate">
+                                {apiKey ? `simulator://${apiKey.slice(0, 8)}...` : "waiting for connection..."}
+                            </div>
+                        </div>
+
+                        {/* Resolution Toggle */}
+                        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/20 border border-white/5">
+                            <button
+                                onClick={() => setViewMode("auto")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    viewMode === "auto" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+                                )}
+                                title="Auto Resolution"
+                            >
+                                <Maximize2 className="w-3 h-3" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("desktop")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    viewMode === "desktop" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+                                )}
+                                title="Force Desktop"
+                            >
+                                <Monitor className="w-3 h-3" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("mobile")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    viewMode === "mobile" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+                                )}
+                                title="Force Mobile"
+                            >
+                                <Smartphone className="w-3 h-3" />
+                            </button>
                         </div>
                     </div>
 
@@ -1028,7 +1120,7 @@ function PreviewBotContent() {
                             </div>
                         </div>
                     ) : (
-                        <div className="relative w-full h-full">
+                        <div className="relative flex-1 min-h-0 overflow-auto custom-scrollbar pb-20">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#13171F_0%,#0A0C12_100%)]" />
 
                             {isTenantSubscribed === false ? (
@@ -1069,27 +1161,24 @@ function PreviewBotContent() {
                                 </div>
                             ) : (
                                 <iframe
-                                    key={apiKey + refreshKey + selectedTenantId}
-                                    srcDoc={`
-                                        <!DOCTYPE html>
-                                        <html>
-                                          <head>
-                                            <meta charset="utf-8">
-                                            <meta name="viewport" content="width=device-width, initial-scale=1">
-                                            <style>
-                                              body { margin: 0; background: transparent; overflow: hidden; }
-                                            </style>
-                                            <script 
-                                              src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js" 
-                                              data-api-key="${apiKey}"
-                                              ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ''}
-                                              async>
-                                            </script>
-                                          </head>
-                                          <body></body>
-                                        </html>
-                                    `}
-                                    className="w-full h-full border-0 relative z-10"
+                                    key={apiKey + refreshKey + selectedTenantId + viewMode}
+                                    src={blobUrl}
+                                    className="border-0 relative z-10 transition-all duration-500 shadow-2xl"
+                                    style={{
+                                        display: "block",
+                                        width: viewMode === "desktop" ? "1200px" : viewMode === "mobile" ? "430px" : "100%",
+                                        height: viewMode === "desktop" ? "800px" : "100%",
+                                        minHeight: viewMode === "auto" ? "100%" : "auto",
+                                        transform: viewMode === "desktop"
+                                            ? "scale(0.7) translate(-15%, -15%)" // Better scale/offset for visibility
+                                            : viewMode === "mobile"
+                                                ? "scale(0.85)"
+                                                : "none",
+                                        transformOrigin: "top center",
+                                        margin: viewMode === "auto" ? "20px" : "40px auto",
+                                        backgroundColor: "transparent",
+                                        borderRadius: viewMode !== "auto" ? "24px" : "0",
+                                    }}
                                     title="Chatbot Simulator"
                                 />
                             )}
