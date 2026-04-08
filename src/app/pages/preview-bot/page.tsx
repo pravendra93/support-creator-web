@@ -346,7 +346,7 @@ function PreviewBotContent() {
                     setSelectedTenantId(wsToSelect.tenant.id);
                     setIsTenantSubscribed(wsToSelect.isSubscribed);
                     if (wsToSelect.apiKey) {
-                        updateApiKey(wsToSelect.apiKey);
+                        // updateApiKey(wsToSelect.apiKey);
                         setTempApiKey(wsToSelect.apiKey);
                         setKeyValidationState("valid");
                         setKeyValidationMessage("API Key Connected");
@@ -960,7 +960,7 @@ function PreviewBotContent() {
                             <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40"></div>
                             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40"></div>
                         </div>
-                        
+
                         <div className="grow flex justify-center">
                             <div className="bg-black/30 rounded-full px-4 py-0.5 text-[10px] text-slate-600 font-mono w-48 text-center truncate">
                                 {apiKey ? `simulator://${apiKey.slice(0, 8)}...` : "waiting for connection..."}
@@ -1167,15 +1167,15 @@ function PreviewBotContent() {
                                     style={{
                                         display: "block",
                                         width: viewMode === "desktop" ? "1200px" : viewMode === "mobile" ? "430px" : "100%",
-                                        height: viewMode === "desktop" ? "800px" : "100%",
-                                        minHeight: viewMode === "auto" ? "100%" : "auto",
+                                        height: viewMode === "desktop" ? "800px" : viewMode === "mobile" ? "850px" : "100%",
+                                        minHeight: viewMode === "auto" ? "750px" : "750px", // Robust virtual height for chat windows
                                         transform: viewMode === "desktop"
-                                            ? "scale(0.7) translate(-15%, -15%)" // Better scale/offset for visibility
+                                            ? "scale(0.7)" // Simplified scale without negative offsets
                                             : viewMode === "mobile"
                                                 ? "scale(0.85)"
                                                 : "none",
                                         transformOrigin: "top center",
-                                        margin: viewMode === "auto" ? "20px" : "40px auto",
+                                        margin: viewMode === "auto" ? "0" : "40px auto",
                                         backgroundColor: "transparent",
                                         borderRadius: viewMode !== "auto" ? "24px" : "0",
                                     }}
