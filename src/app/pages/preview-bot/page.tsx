@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 import {
-    Loader2, Sparkles, MessageSquare, Zap, Target, Coins, Calendar,
-    X, CheckCircle2, XCircle, AlertTriangle,
-    ArrowRight, Key, Bot, Settings, Copy, Check, Lock,
-    ChevronDown, RefreshCw, Send, Mic, User
+    Loader2, Sparkles, Layout, MessageSquare, Zap, Target, Coins, Calendar,
+    ChevronDown, X, CheckCircle2, XCircle, AlertTriangle,
+    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check, Lock,
+    Monitor, Smartphone, Maximize2, RefreshCw, Send, Mic, User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+// import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
+import { ChatBotConfig } from "@/components/chatbot/chatbot-config";
 import { CreateApiKeyModal } from "@/components/api-keys/create-api-key-modal";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -48,6 +50,61 @@ function PreviewBotContent() {
     const [isCheckingReadiness, setIsCheckingReadiness] = useState(true);
     const [showWorkspaceSelector, setShowWorkspaceSelector] = useState(false);
     const [isTenantSubscribed, setIsTenantSubscribed] = useState<boolean | null>(null);
+    const [blobUrl, setBlobUrl] = useState<string>("");
+    const [viewMode, setViewMode] = useState<"auto" | "desktop" | "mobile">("auto");
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [keyValidationMessage, setKeyValidationMessage] = useState("");
+    const [isAutoSelected, setIsAutoSelected] = useState(false);
+
+    // Generate Blob URL for simulator to resolve CORS/Origin null issues
+    useEffect(() => {
+        if (!apiKey) {
+            setBlobUrl("");
+            return;
+        }
+
+        const html = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chatbot Simulator</title>
+    <style>
+      html, body { height: 100% !important; width: 100% !important; margin: 0; padding: 0; background: transparent; overflow: visible !important; }
+      #simulator-status { position: fixed; top: 10px; left: 10px; color: rgba(255,255,255,0.1); font-family: monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; pointer-events: none; z-index: 999; }
+    </style>
+    <script 
+      src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js" 
+      data-api-key="${apiKey}"
+      ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ""}
+      async>
+    </script>
+    <script>
+      // Synthetic resize trigger to force layout calculations for the widget (mimics DevTools opening)
+      window.addEventListener('load', function() {
+        var delays = [100, 500, 1000, 2000];
+        delays.forEach(function(delay) {
+          setTimeout(function() {
+            window.dispatchEvent(new Event('resize'));
+          }, delay);
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="simulator-status">SIMULATOR_ACTIVE</div>
+  </body>
+</html>`;
+
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        setBlobUrl(url);
+
+        return () => {
+            URL.revokeObjectURL(url);
+        };
+    }, [apiKey, selectedTenantId, refreshKey]);
 
     const [keyValidationState, setKeyValidationState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
     const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
@@ -56,14 +113,14 @@ function PreviewBotContent() {
 
     // scroll-to-bottom dummy chat with typing animation
     const [chatMessages, setChatMessages] = useState([
-        { 
-            role: "bot", 
-            text: "**Hi there! I'm RaKri AI.**\n\nI can help you build and deploy custom AI agents in minutes. How can I transform your business today?" 
+        {
+            role: "bot",
+            text: "**Hi there! I'm RaKri AI.**\n\nI can help you build and deploy custom AI agents in minutes. How can I transform your business today?"
         },
         { role: "user", text: "I want to automate my support workload" },
-        { 
-            role: "bot", 
-            text: "Excellent goal. Our automation systems typically achieve:\n\n• **70% reduction** in manual ticket volume\n• **<1s average** response time\n• **24/7 coverage** across all regions\n\nWould you like to see our pricing or discuss a specific use-case?" 
+        {
+            role: "bot",
+            text: "Excellent goal. Our automation systems typically achieve:\n\n• **70% reduction** in manual ticket volume\n• **<1s average** response time\n• **24/7 coverage** across all regions\n\nWould you like to see our pricing or discuss a specific use-case?"
         }
     ]);
     const [chatInput, setChatInput] = useState("");
@@ -106,7 +163,6 @@ function PreviewBotContent() {
         setChatMessages(prev => [...prev, { role: "user", text: msg }]);
         setIsBotTyping(true);
 
-        // Realistic response simulation with variable delay
         const delay = 1000 + Math.random() * 1000;
         setTimeout(() => {
             setIsBotTyping(false);
@@ -143,8 +199,6 @@ function PreviewBotContent() {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [chatMessages, isBotTyping]);
 
-    // ── API Key modal open ──────────────────────────────────────────────────
-
     const handleApiKeyModalOpen = async () => {
         try {
             const res = await fetch("/api/api-keys");
@@ -156,8 +210,6 @@ function PreviewBotContent() {
         } catch { /* noop */ }
         setIsKeyModalOpen(true);
     };
-
-    // ── Validate key ────────────────────────────────────────────────────────
 
     const validateApiKey = useCallback(async (key: string) => {
         if (!key || key.length < 10) { setKeyValidationState("idle"); return; }
@@ -172,23 +224,18 @@ function PreviewBotContent() {
                     return;
                 }
             }
-            // fallback: if we already have a tenant, treat as valid
             if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
         } catch {
             if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTenantId]);
 
     useEffect(() => {
         if (apiKey && keyValidationState !== "valid") validateApiKey(apiKey);
         else if (!apiKey) setKeyValidationState("idle");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [apiKey]);
-
-    // ── Workspace readiness check ────────────────────────────────────────────
+    }, [apiKey, validateApiKey, keyValidationState]);
 
     useEffect(() => {
         if (!user) return;
@@ -224,23 +271,30 @@ function PreviewBotContent() {
                 const lastId = localStorage.getItem("simulator_last_workspace");
                 const savedKey = localStorage.getItem("simulator_api_key");
 
-                let ws: WorkspaceReadiness | null = null;
+                let wsToSelect: WorkspaceReadiness | null = null;
                 if (lastId) {
-                    ws = readiness.find(w => w.tenant.id === lastId) ?? (ready[0] ?? readiness[0] ?? null);
+                    wsToSelect = readiness.find(w => w.tenant.id === lastId) ?? (ready[0] ?? readiness[0] ?? null);
                 } else if (ready.length === 1) {
-                    ws = ready[0];
+                    wsToSelect = ready[0];
                 } else if (ready.length > 1) {
                     setShowWorkspaceSelector(true);
-                } else {
-                    ws = readiness[0] ?? null;
+                } else if (readiness.length > 0) {
+                    wsToSelect = readiness[0];
                 }
 
-                if (ws) {
-                    setSelectedTenantId(ws.tenant.id);
-                    setIsTenantSubscribed(ws.isSubscribed);
-                    const key = ws.apiKey ?? savedKey ?? "";
-                    if (key) { updateApiKey(key); setTempApiKey(key); setKeyValidationState("valid"); }
-                    localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+                if (wsToSelect) {
+                    setSelectedTenantId(wsToSelect.tenant.id);
+                    setIsTenantSubscribed(wsToSelect.isSubscribed);
+                    if (wsToSelect.apiKey) {
+                        updateApiKey(wsToSelect.apiKey);
+                        setTempApiKey(wsToSelect.apiKey);
+                        setKeyValidationState("valid");
+                    } else if (savedKey) {
+                        updateApiKey(savedKey);
+                        setTempApiKey(savedKey);
+                        setKeyValidationState("valid");
+                    }
+                    localStorage.setItem("simulator_last_workspace", wsToSelect.tenant.id);
                 }
             } catch (e) {
                 console.error("Workspace readiness check failed", e);
@@ -251,7 +305,6 @@ function PreviewBotContent() {
         check();
     }, [user]);
 
-    // ── Fetch Chatbot Config ──────────────────────────────────────────────────
     useEffect(() => {
         if (!selectedTenantId) return;
         const fetchConfig = async () => {
@@ -260,7 +313,6 @@ function PreviewBotContent() {
                 if (res.ok) {
                     const config = await res.json();
                     setChatbotConfig(config);
-                    // Reset messages based on config
                     if (config.welcome_message) {
                         setChatMessages([
                             { role: "bot", text: `**Hi — I can help you explore how ${config.name || "AI"} can improve your business.**\n\nHere are a few ways I can assist:` }
@@ -286,19 +338,14 @@ function PreviewBotContent() {
         );
     }
 
-    const readyCount = workspaceReadiness.filter(w => w.status === "ready").length;
-
     return (
         <div className="flex h-screen bg-[#080A10] text-white overflow-hidden font-sans">
-            {/* Ambient glows */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[140px]" />
                 <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px]" />
             </div>
 
-            {/* ── Sidebar ── */}
             <aside className="relative z-20 hidden lg:flex flex-col w-[360px] shrink-0 border-r border-white/5 bg-[#0B0D14]/80 backdrop-blur-2xl">
-                {/* Brand / Logo */}
                 <div className="p-6 pb-2">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -311,7 +358,6 @@ function PreviewBotContent() {
                     </div>
                 </div>
 
-                {/* Tabs */}
                 <div className="px-4 py-4">
                     <div className="flex p-1 bg-white/5 rounded-2xl gap-1">
                         {([
@@ -336,7 +382,6 @@ function PreviewBotContent() {
                     </div>
                 </div>
 
-                {/* Sidebar Content */}
                 <div className="flex-1 overflow-y-auto px-6 py-2 space-y-8 custom-scrollbar">
                     {activeTab === "intro" && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -357,6 +402,7 @@ function PreviewBotContent() {
                                                         setSelectedTenantId(id);
                                                         setIsTenantSubscribed(ws?.isSubscribed ?? null);
                                                         if (ws?.apiKey) { updateApiKey(ws.apiKey); setTempApiKey(ws.apiKey); setKeyValidationState("valid"); }
+                                                        else { updateApiKey(""); setTempApiKey(""); setKeyValidationState("idle"); }
                                                         localStorage.setItem("simulator_last_workspace", id);
                                                     }}
                                                 >
@@ -387,68 +433,10 @@ function PreviewBotContent() {
                                     <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                                 </button>
                             </div>
-
-                            {apiKey && (
-                                <div className="space-y-4 pt-2">
-                                    <div className="p-5 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 space-y-4">
-                                        <div>
-                                            <h4 className="text-xs font-black text-white uppercase tracking-wider">Embed Snippet</h4>
-                                            <p className="text-[11px] text-slate-400 mt-1">Ready to go live? Copy the code below.</p>
-                                        </div>
-                                        <div className="relative group">
-                                            <pre className="bg-black/60 p-4 rounded-xl text-[10px] font-mono text-indigo-300 overflow-x-auto border border-white/5 whitespace-pre-wrap">
-                                                {getSnippet()}
-                                            </pre>
-                                            <button
-                                                onClick={handleCopySnippet}
-                                                className="absolute top-2 right-2 p-2 bg-indigo-600/80 hover:bg-indigo-500 rounded-lg text-white transition-all opacity-0 group-hover:opacity-100 shadow-lg cursor-pointer"
-                                            >
-                                                {isSnippetCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {!apiKey && (
-                                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                                        <Zap className="w-4 h-4 text-indigo-400" />
-                                    </div>
-                                    <h4 className="text-sm font-bold text-white">Getting Started</h4>
-                                    <p className="text-xs text-slate-500 leading-relaxed">Connect your API key to sync this preview with your actual bot configurations.</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === "config" && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
-                             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Appearance</h3>
-                             <p className="text-xs text-slate-500 leading-relaxed">Appearance settings are managed globally. Head to the Chatbot dashboard to update colors and branding.</p>
-                             <Button asChild className="w-full bg-white text-[#080A10] hover:bg-slate-200 rounded-xl font-bold py-6">
-                                <a href="/pages/chatbot" className="flex items-center gap-2">
-                                    <Settings className="w-4 h-4" />
-                                    Manage Chatbot
-                                </a>
-                             </Button>
-                        </div>
-                    )}
-
-                    {activeTab === "voice" && (
-                        <div className="flex flex-col items-center text-center gap-6 py-12 animate-in fade-in slide-in-from-left-4 duration-500">
-                            <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center animate-pulse">
-                                <Mic className="w-7 h-7 text-indigo-400" />
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-bold text-white">Voice Pipeline</h4>
-                                <p className="text-xs text-slate-500 mt-2 leading-relaxed px-4">Interactive voice conversations are in early access. Stay tuned for updates.</p>
-                            </div>
                         </div>
                     )}
                 </div>
 
-                {/* Footer fixed */}
                 <div className="p-6 border-t border-white/5">
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-white/3 border border-white/5">
                         <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
@@ -462,13 +450,9 @@ function PreviewBotContent() {
                 </div>
             </aside>
 
-            {/* ── Main Chat Interface ── */}
             <main className="flex-1 flex flex-col min-h-0 bg-[#05060B] relative overflow-hidden">
-                {/* Subtle Grid / Noise */}
-                <div className="absolute inset-0 scifi-grid opacity-[0.03] pointer-events-none" />
                 <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />
 
-                {/* Header */}
                 <header className="relative z-30 h-16 border-b border-white/5 bg-black/40 backdrop-blur-xl flex items-center justify-between px-8">
                     <div className="flex items-center gap-4">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center p-0.5">
@@ -484,115 +468,147 @@ function PreviewBotContent() {
                                     <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Active</span>
                                 </div>
                             </div>
-                            <p className="text-[10px] text-slate-500 font-medium">Internal Performance Sandbox</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-400">
-                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                             Strategy Engine
-                         </div>
-                         <button
-                            onClick={() => window.location.reload()}
+                        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/20 border border-white/5">
+                            <button
+                                onClick={() => setViewMode("auto")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    viewMode === "auto" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+                                )}
+                                title="Auto Resolution"
+                            >
+                                <Maximize2 className="w-3 h-3" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("desktop")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    viewMode === "desktop" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+                                )}
+                                title="Desktop"
+                            >
+                                <Monitor className="w-3 h-3" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("mobile")}
+                                className={cn(
+                                    "p-1 rounded transition-colors",
+                                    viewMode === "mobile" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+                                )}
+                                title="Mobile"
+                            >
+                                <Smartphone className="w-3 h-3" />
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setRefreshKey(k => k + 1)}
                             className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all cursor-pointer"
-                         >
+                        >
                             <RefreshCw className="w-4 h-4" />
-                         </button>
+                        </button>
                     </div>
                 </header>
 
-                {/* Messages Area */}
-                <div className="relative z-10 flex-1 overflow-y-auto px-6 py-8 custom-scrollbar">
-                    <div className="max-w-4xl mx-auto space-y-8">
-                        {chatMessages.map((msg, idx) => (
-                            <div key={idx} className="space-y-3">
-                                <div
-                                    className={cn(
-                                        "flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500",
-                                        msg.role === "user" ? "flex-row-reverse" : "flex-row"
-                                    )}
-                                >
-                                    {/* Avatar - perfectly aligned to top */}
-                                    <div className={cn(
-                                        "w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 shadow-lg transition-transform hover:rotate-12 mt-0.5",
-                                        msg.role === "bot"
-                                            ? "bg-slate-900 border border-white/10"
-                                            : "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-indigo-500/20"
-                                    )}>
-                                        {msg.role === "bot" ? <Bot className="w-5 h-5 text-indigo-400" /> : <User className="w-5 h-5" />}
-                                    </div>
+                <div className="flex-1 flex flex-col overflow-hidden relative">
+                    {keyValidationState === "invalid" ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-20">
+                            <div className="relative mb-6">
+                                <div className="absolute -inset-6 bg-red-500/10 rounded-full blur-3xl animate-pulse" />
+                                <div className="relative w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                    <XCircle className="w-8 h-8 text-red-500" />
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">Invalid API Key</h3>
+                            <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed mb-6">
+                                The API key could not be validated. Please check it and try again.
+                            </p>
+                            <button
+                                onClick={() => setIsKeyModalOpen(true)}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2"
+                            >
+                                <Key className="w-4 h-4" />
+                                Update API Key
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="relative flex-1 min-h-0 overflow-auto custom-scrollbar pb-20">
+                             <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />
 
-                                    {/* Bubble - limited width for better readability */}
-                                    <div className={cn(
-                                        "max-w-[75%] px-5 py-4 rounded-3xl text-sm leading-relaxed shadow-2xl transition-all whitespace-pre-wrap",
-                                        msg.role === "bot"
-                                            ? "bg-[#13171F]/90 border border-white/10 text-slate-200 rounded-tl-sm backdrop-blur-md"
-                                            : "bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-tr-sm shadow-indigo-500/20 font-medium"
-                                    )}>
-                                        {msg.text.split("\n\n").map((part, i) => (
-                                            <div key={i} className={cn(i > 0 && "mt-3")}>
-                                                {part.split("\n").map((line, j) => (
-                                                    <div key={j} className={cn(line.startsWith("•") && "pl-4 -indent-4")}>
-                                                        {line.split("**").map((text, k) => (
-                                                            k % 2 === 1 ? <strong key={k} className="text-white font-black">{text}</strong> : text
-                                                        ))}
-                                                    </div>
-                                                ))}
+                            {isTenantSubscribed === false ? (
+                                <div className="absolute inset-0 z-40 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-500">
+                                    <div className="min-h-full flex flex-col items-center justify-center gap-6 px-6 sm:px-12 text-center py-12 sm:py-16 relative">
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] pointer-events-none" />
+
+                                        <div className="relative group shrink-0">
+                                            <div className="absolute -inset-8 rounded-full blur-[60px] opacity-20 bg-orange-500 animate-pulse"></div>
+                                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-slate-900 to-slate-800 border-2 border-white/10 flex items-center justify-center shadow-2xl">
+                                                <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-orange-500 animate-bounce" />
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Quick Actions */}
-                                {idx === 0 && msg.role === "bot" && (
-                                    <div className="flex flex-wrap gap-2 ml-13 pt-1 animate-in fade-in slide-in-from-left-4 delay-300 duration-700">
-                                        {QUICK_ACTIONS.filter(a => !a.hiddenFromStart).map(action => (
-                                            <button
-                                                key={action.label}
-                                                onClick={() => handleQuickAction(action)}
-                                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:border-indigo-500/50 hover:bg-white/10 transition-all text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer active:scale-95 shadow-lg group"
-                                            >
-                                                <action.icon className="w-3 h-3 text-indigo-400 group-hover:scale-125 transition-transform" />
-                                                {action.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-
-                        {isBotTyping && (
-                            <div className="flex items-start gap-4 animate-in fade-in duration-300">
-                                <div className="w-9 h-9 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
-                                    <Bot className="w-5 h-5 text-indigo-400" />
-                                </div>
-                                <div className="bg-[#13171F]/90 border border-white/10 px-6 py-4 rounded-3xl rounded-tl-sm flex flex-col gap-2 shadow-xl backdrop-blur-md">
-                                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                        <div className="flex gap-1">
-                                            {[0, 0.2, 0.4].map(d => (
-                                                <div key={d} className="w-1 h-1 rounded-full bg-indigo-500/50 animate-bounce" style={{ animationDelay: `${d}s` }} />
-                                            ))}
                                         </div>
-                                        {chatbotConfig?.name || "RaKri AI"} is analyzing...
+
+                                        <div className="space-y-4 sm:space-y-6 max-w-sm sm:max-w-md mx-auto z-10">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 mb-2">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Access Restricted</span>
+                                            </div>
+                                            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-none uppercase">
+                                                Premium <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Locked</span>
+                                            </h3>
+                                            <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+                                                This <strong className="text-white">Simulator Hub</strong> requires an active premium subscription.
+                                            </p>
+                                            <div className="pt-2 sm:pt-4 flex flex-col gap-3 w-full">
+                                                <Button
+                                                    asChild
+                                                    className="w-full py-5 sm:py-6 bg-white text-[#0A0C12] hover:bg-slate-100 rounded-2xl font-black shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                                                >
+                                                    <a href="/pages/billing">
+                                                        Upgrade Now <ArrowRight className="w-4 h-4" />
+                                                    </a>
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                        <div ref={chatEndRef} />
-                    </div>
+                            ) : blobUrl ? (
+                                <iframe
+                                    key={apiKey + refreshKey + selectedTenantId + viewMode}
+                                    src={blobUrl}
+                                    className="border-0 relative z-10 transition-all duration-500 shadow-2xl"
+                                    style={{
+                                        display: "block",
+                                        width: viewMode === "desktop" ? "1200px" : viewMode === "mobile" ? "430px" : "100%",
+                                        height: viewMode === "desktop" ? "800px" : viewMode === "mobile" ? "850px" : "100%",
+                                        minHeight: viewMode === "auto" ? "750px" : "750px",
+                                        transform: viewMode === "desktop"
+                                            ? "scale(0.7)"
+                                            : viewMode === "mobile"
+                                                ? "scale(0.85)"
+                                                : "none",
+                                        transformOrigin: "top center",
+                                        margin: viewMode === "auto" ? "0" : "40px auto",
+                                        backgroundColor: "transparent",
+                                        borderRadius: viewMode !== "auto" ? "24px" : "0",
+                                    }}
+                                    title="Chatbot Simulator"
+                                />
+                            ) : (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500/20" />
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* Input Section */}
                 <footer className="relative z-30 p-8 pt-0 mt-auto">
                     <div className="max-w-3xl mx-auto w-full space-y-6">
-                        {/* Spacer to prevent input being too close to chat */}
-                        <div className="h-2" />
-
-                        {/* Input Area */}
                         <div className="relative group p-1 rounded-full bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent">
-                             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-full blur-xl opacity-0 group-focus-within:opacity-100 transition duration-700" />
-                             <div className="relative bg-[#13171F]/90 backdrop-blur-3xl border border-white/10 rounded-full flex items-center p-1.5 group-focus-within:border-indigo-500/50 group-focus-within:bg-[#13171F] transition-all shadow-2xl">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-full blur-xl opacity-0 group-focus-within:opacity-100 transition duration-700" />
+                            <div className="relative bg-[#13171F]/90 backdrop-blur-3xl border border-white/10 rounded-full flex items-center p-1.5 group-focus-within:border-indigo-500/50 group-focus-within:bg-[#13171F] transition-all shadow-2xl">
                                 <input
                                     type="text"
                                     value={chatInput}
@@ -613,10 +629,8 @@ function PreviewBotContent() {
                                 >
                                     <Send className="w-4 h-4" />
                                 </button>
-                             </div>
+                            </div>
                         </div>
-
-                        {/* Footer text */}
                         <p className="text-[10px] text-center text-slate-600 font-medium">
                             Premium AI Assistant Preview • Adaptive Context Architecture
                         </p>
@@ -624,13 +638,12 @@ function PreviewBotContent() {
                 </footer>
             </main>
 
-            {/* ── Existing Modals ── */}
             <Suspense fallback={null}>
                 {showWorkspaceSelector && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
                         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowWorkspaceSelector(false)} />
                         <div className="relative w-full max-w-xl bg-[#0D1117] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                             <div className="p-8 space-y-6">
+                            <div className="p-8 space-y-6">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
                                         <Bot className="w-6 h-6 text-indigo-400" />
@@ -653,16 +666,16 @@ function PreviewBotContent() {
                                             }}
                                             className="group w-full text-left p-5 rounded-2xl border border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-4 cursor-pointer"
                                         >
-                                             <StatusDot status={ws.status} />
-                                             <div className="flex-1">
-                                                 <p className="font-bold text-white text-sm">{ws.tenant.name}</p>
-                                                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mt-1">Ready</p>
-                                             </div>
-                                             <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                            <StatusDot status={ws.status} />
+                                            <div className="flex-1">
+                                                <p className="font-bold text-white text-sm">{ws.tenant.name}</p>
+                                                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mt-1">Ready</p>
+                                            </div>
+                                            <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                         </button>
                                     ))}
                                 </div>
-                             </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -671,7 +684,7 @@ function PreviewBotContent() {
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in zoom-in-95 fade-in duration-300">
                         <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setIsKeyModalOpen(false)} />
                         <div className="relative w-full max-w-md bg-[#0D1117] border border-white/10 rounded-3xl shadow-2xl p-8 space-y-8">
-                             <div className="flex flex-col items-center text-center gap-4">
+                            <div className="flex flex-col items-center text-center gap-4">
                                 <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
                                     <Key className="w-8 h-8 text-indigo-400" />
                                 </div>
@@ -679,8 +692,8 @@ function PreviewBotContent() {
                                     <h3 className="text-2xl font-black text-white tracking-tight">Access Control</h3>
                                     <p className="text-slate-500 text-sm font-medium mt-2">Enter your Production API Key</p>
                                 </div>
-                             </div>
-                             <div className="space-y-4">
+                            </div>
+                            <div className="space-y-4">
                                 <div className="relative group">
                                     <Zap className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-indigo-400 transition-colors" />
                                     <input
@@ -704,7 +717,7 @@ function PreviewBotContent() {
                                         Cancel
                                     </button>
                                 </div>
-                             </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -715,7 +728,7 @@ function PreviewBotContent() {
                         setIsCreateApiKeyModalOpen(false);
                         if (createdKey) { setKeyValidationState("idle"); updateApiKey(createdKey); setTempApiKey(createdKey); }
                     }}
-                    onSuccess={() => {}}
+                    onSuccess={() => { }}
                     initialTenantId={selectedTenantId}
                 />
             </Suspense>
@@ -726,7 +739,7 @@ function PreviewBotContent() {
 export default function PreviewBotPage() {
     return (
         <Suspense fallback={
-            <div className="flex h-full w-full items-center justify-center bg-[#080A10]">
+            <div className="flex h-screen w-full items-center justify-center bg-[#080A10]">
                 <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
             </div>
         }>
