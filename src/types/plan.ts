@@ -34,6 +34,10 @@ export interface PlanFeatures {
         max_storage_mb?: number;
         max_chunks_total?: number;
     };
+    tenant_limits?: {
+        max_tenants?: number;
+        extra_tenant_price_usd?: number;
+    };
     [key: string]: unknown;
 }
 

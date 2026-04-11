@@ -264,7 +264,7 @@ export default function DashboardPage() {
                                 <div className="mt-4 p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 backdrop-blur-sm">
                                     <p className="text-xs text-blue-300 leading-relaxed">
                                         <Zap className="w-3 h-3 inline mr-1 mb-0.5" />
-                                        Your {stats?.plan || "Trial"} plan includes <strong>{(stats?.workspace_count || 0) + 2}</strong> more workspaces.
+                                        Your {stats?.plan || "Trial"} plan includes <strong>{(stats?.workspace_count || 0)}</strong> more workspaces.
                                     </p>
                                 </div>
                             </div>

@@ -56,6 +56,12 @@ function deriveFeatureList(features: PlanFeatures | undefined | null): string[] 
     }
 
     // Nested shapes
+    if (features.tenant_limits?.max_tenants) {
+        items.push(`Up to ${features.tenant_limits.max_tenants} workspace${features.tenant_limits.max_tenants > 1 ? "s" : ""}`);
+    }
+    if (features.tenant_limits?.extra_tenant_price_usd) {
+        items.push(`$${features.tenant_limits.extra_tenant_price_usd}/mo per extra workspace`);
+    }
     if (features.team?.max_users) {
         items.push(`Up to ${features.team.max_users} team member${features.team.max_users > 1 ? "s" : ""}`);
     }
@@ -91,7 +97,9 @@ function deriveFeatureList(features: PlanFeatures | undefined | null): string[] 
 }
 
 // Plans that should be visually highlighted as "popular"
-const POPULAR_SLUGS = new Set(["growth-plan", "pro-plan"]);
+// const pupular_plans = ["growth-plan", "pro-plan"];
+const pupular_plans = ["starter-yearly", "starter-monthly"];
+const POPULAR_SLUGS = new Set(pupular_plans);
 
 // ─── component ───────────────────────────────────────────────────────────────
 

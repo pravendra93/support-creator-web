@@ -18,7 +18,7 @@ export default function NewWorkspacePage() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to create workspace");
+            throw new Error(errorData.detail || errorData.message || "Failed to create workspace");
         }
     };
 
