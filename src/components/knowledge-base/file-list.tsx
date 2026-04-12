@@ -1,4 +1,5 @@
-import { FileText, Loader2, CheckCircle, Clock, Eye, Play, Square } from "lucide-react";
+import { FileText, Loader2, CheckCircle, Clock, Eye, Play, Square, Power } from "lucide-react";
+import { useState } from "react";
 import { format } from "date-fns";
 import {
     Table,
@@ -10,6 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export type FileStatus = "in_progress" | "done" | "chunking" | "uploaded" | "processing" | "processed" | "failed";
 
@@ -19,6 +22,7 @@ export interface KnowledgeBaseFile {
     size: string;
     type?: string;
     status: FileStatus;
+    is_active: boolean;
     uploadedAt: Date;
     workspaceName?: string;
     storage_url?: string;
@@ -31,6 +35,7 @@ interface FileListProps {
     onView?: (id: string) => void;
     onProcess?: (id: string) => void;
     onStop?: (id: string) => void;
+    onToggleActive?: (id: string, active: boolean) => Promise<void>;
 }
 
 const statusMap: Record<FileStatus, { label: string; className: string; icon: React.ReactNode }> = {
@@ -71,7 +76,7 @@ const statusMap: Record<FileStatus, { label: string; className: string; icon: Re
     },
 };
 
-export function FileList({ files, onView, onProcess, onStop }: FileListProps) {
+export function FileList({ files, onView, onProcess, onStop, onToggleActive }: FileListProps) {
     return (
         <div className="rounded-lg border bg-card shadow-sm">
             <Table>
@@ -138,40 +143,59 @@ export function FileList({ files, onView, onProcess, onStop }: FileListProps) {
                                 </div>
                             </TableCell>
                             <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                    {/* Show Process button for files that need processing or are processing */}
-                                    {(file.status === 'uploaded' || file.status === 'failed' || file.status === 'in_progress' || file.status === 'processing') && (
+                                <div className="flex items-center justify-end gap-3">
+                                    <Tooltip
+                                        content={file.is_active 
+                                            ? "This file is active and used as context for the AI Assisted agent" 
+                                            : "This file is inactive and excluded from the AI Assisted agent's context"
+                                        }
+                                    >
+                                        <div className="flex items-center gap-2 mr-2">
+                                            <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors ${file.is_active ? 'text-emerald-500' : 'text-muted-foreground/50'}`}>
+                                                {file.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                            <Switch
+                                                checked={file.is_active}
+                                                onCheckedChange={(checked) => onToggleActive?.(file.id, checked)}
+                                                className="data-[state=checked]:bg-emerald-500 cursor-pointer"
+                                            />
+                                        </div>
+                                    </Tooltip>
+                                    <div className="flex items-center gap-1 border-l pl-3 border-gray-100">
+                                        {/* Show Process button for files that need processing or are processing */}
+                                        {(file.status === 'uploaded' || file.status === 'failed' || file.status === 'in_progress' || file.status === 'processing') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className={`h-8 w-8 cursor-pointer ${file.status === 'processing' ? 'text-red-500 hover:text-red-700' : 'text-muted-foreground hover:text-green-600'}`}
+                                                onClick={() => {
+                                                    if (file.status === 'processing') {
+                                                        onStop?.(file.id);
+                                                    } else {
+                                                        onProcess?.(file.id);
+                                                    }
+                                                }}
+                                                title={file.status === 'processing' ? "Stop processing" : "Process document"}
+                                            >
+                                                {file.status === 'processing' ? (
+                                                    <Square className="h-4 w-4 fill-current" />
+                                                ) : (
+                                                    <Play className="h-4 w-4" />
+                                                )}
+                                                <span className="sr-only">{file.status === 'processing' ? "Stop" : "Process"}</span>
+                                            </Button>
+                                        )}
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className={`h-8 w-8 cursor-pointer ${file.status === 'processing' ? 'text-red-500 hover:text-red-700' : 'text-muted-foreground hover:text-green-600'}`}
-                                            onClick={() => {
-                                                if (file.status === 'processing') {
-                                                    onStop?.(file.id);
-                                                } else {
-                                                    onProcess?.(file.id);
-                                                }
-                                            }}
-                                            title={file.status === 'processing' ? "Stop processing" : "Process document"}
+                                            className="h-8 w-8 text-muted-foreground hover:text-blue-600 cursor-pointer"
+                                            onClick={() => onView?.(file.id)}
+                                            title="View document"
                                         >
-                                            {file.status === 'processing' ? (
-                                                <Square className="h-4 w-4 fill-current" />
-                                            ) : (
-                                                <Play className="h-4 w-4" />
-                                            )}
-                                            <span className="sr-only">{file.status === 'processing' ? "Stop" : "Process"}</span>
+                                            <Eye className="h-4 w-4" />
+                                            <span className="sr-only">View</span>
                                         </Button>
-                                    )}
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-muted-foreground hover:text-blue-600 cursor-pointer"
-                                        onClick={() => onView?.(file.id)}
-                                        title="View document"
-                                    >
-                                        <Eye className="h-4 w-4" />
-                                        <span className="sr-only">View</span>
-                                    </Button>
+                                    </div>
                                 </div>
                             </TableCell>
                         </TableRow>
