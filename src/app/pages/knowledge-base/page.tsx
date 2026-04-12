@@ -103,6 +103,7 @@ function KnowledgeBaseContent() {
                             size: (f.file_size / (1024 * 1024)).toFixed(2) + " MB",
                             raw_size: f.file_size,
                             status: f.status,
+                            is_active: f.is_active,
                             uploadedAt: new Date(f.created_at),
                             storage_url: f.storage_url || `${process.env.NEXT_PUBLIC_SPACES_URL}/${f.storage_key}`,
                             estimated_time: f.estimated_time,
@@ -243,6 +244,38 @@ function KnowledgeBaseContent() {
         }
     };
 
+    const handleToggleActive = async (fileId: string, active: boolean) => {
+        // Optimistic update
+        setFiles(prev => prev.map(f => f.id === fileId ? { ...f, is_active: active } : f));
+
+        try {
+            const res = await fetch(`/api/knowledge-base/${fileId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ is_active: active })
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.message || "Failed to update status");
+            }
+
+            toast({
+                title: active ? "File activated" : "File deactivated",
+                description: `Document has been ${active ? 'activated' : 'deactivated'}.`,
+            });
+        } catch (error: unknown) {
+            // Rollback on error
+            setFiles(prev => prev.map(f => f.id === fileId ? { ...f, is_active: !active } : f));
+            console.error("Toggle active error:", error);
+            toast({
+                title: "Update failed",
+                description: getErrorMessage(error) || "Failed to update document status.",
+                variant: "destructive",
+            });
+        }
+    };
+
     const handleUploadClick = () => {
         setIsUploadModalOpen(true);
     };
@@ -273,6 +306,7 @@ function KnowledgeBaseContent() {
             workspaceName: workspaceName,
             size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
             status: "in_progress",
+            is_active: true,
             uploadedAt: new Date(),
         };
         setFiles(prev => [tempFile, ...prev]);
@@ -386,7 +420,13 @@ function KnowledgeBaseContent() {
             ) : files.length === 0 && !isLoading ? (
                 <EmptyState onUpload={handleUploadClick} />
             ) : (
-                <FileList files={files} onView={handleView} onProcess={handleProcess} onStop={handleStop} />
+                <FileList 
+                    files={files} 
+                    onView={handleView} 
+                    onProcess={handleProcess} 
+                    onStop={handleStop} 
+                    onToggleActive={handleToggleActive}
+                />
             )}
         </div>
     );
