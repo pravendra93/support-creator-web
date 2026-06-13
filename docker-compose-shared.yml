@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  support-creator-web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: support-creator-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      # Tell the frontend how to reach the API internally
+      - INTERNAL_BACKEND_URL=http://assistor-creator-api:8000
+    networks:
+      - shared_network
+
+networks:
+  shared_network:
+    external: true

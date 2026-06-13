@@ -83,10 +83,10 @@ export default function HowItWorks() {
                         How It Works
                     </div>
                     <h2 className="text-3xl font-bold tracking-tighter md:text-4xl lg:text-5xl bg-gradient-to-r from-white via-white to-slate-400 bg-clip-text text-transparent">
-                        From Data to AI Agent in 4 Steps
+                        From Data to AI Assisted Agent in 4 Steps
                     </h2>
                     <p className="max-w-[700px] text-muted-foreground md:text-lg">
-                        Transform your business knowledge into an intelligent AI support agent that serves your customers around the clock.
+                        Transform your business knowledge into an intelligent AI assisted chatbot that serves your customers around the clock.
                     </p>
                 </div>
 
