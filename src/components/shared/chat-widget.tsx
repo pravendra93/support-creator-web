@@ -41,11 +41,12 @@ export default function ChatWidget() {
     if (!shouldLoad && pathname !== "/") {
         return null;
     }
+    const widgetScriptUrl = process.env.NEXT_PUBLIC_WIDGET_URL || "https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js";
 
     return (
         <Script
             id="assistra-widget-script"
-            src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js"
+            src={widgetScriptUrl}
             data-api-key="sk_live_0CB_E4vbs9mpCRsfA19lBctmuy8Aj2hD"
             strategy="afterInteractive"
         />

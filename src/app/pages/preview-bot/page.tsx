@@ -68,6 +68,8 @@ function PreviewBotContent() {
             return;
         }
 
+        const widgetScriptUrl = process.env.NEXT_PUBLIC_WIDGET_URL || "https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js";
+
         const html = `
 <!DOCTYPE html>
 <html>
@@ -80,8 +82,10 @@ function PreviewBotContent() {
       #simulator-status { position: fixed; top: 10px; left: 10px; color: rgba(255,255,255,0.1); font-family: monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; pointer-events: none; z-index: 999; }
     </style>
     <script 
-      src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js" 
+      src="${widgetScriptUrl}" 
       data-api-key="${apiKey}"
+      data-open="true"
+      data-api-url="http://localhost:8001"
       ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ""}
       async>
     </script>
@@ -1162,7 +1166,7 @@ function PreviewBotContent() {
                             ) : (
                                 <iframe
                                     key={apiKey + refreshKey + selectedTenantId + viewMode}
-                                    src={blobUrl}
+                                    src={blobUrl || undefined}
                                     className="border-0 relative z-10 transition-all duration-500 shadow-2xl"
                                     style={{
                                         display: "block",
