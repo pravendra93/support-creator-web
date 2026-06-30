@@ -69,6 +69,7 @@ function PreviewBotContent() {
         }
 
         const widgetScriptUrl = process.env.NEXT_PUBLIC_WIDGET_URL || "https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js";
+        const chatApiUrl = process.env.NEXT_PUBLIC_CHAT_API_URL || "http://localhost:8001";
 
         const html = `
 <!DOCTYPE html>
@@ -85,7 +86,7 @@ function PreviewBotContent() {
       src="${widgetScriptUrl}" 
       data-api-key="${apiKey}"
       data-open="true"
-      data-api-url="http://localhost:8001"
+      data-api-url="${chatApiUrl}"
       ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ""}
       async>
     </script>
@@ -678,7 +679,7 @@ function PreviewBotContent() {
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-black text-white uppercase tracking-tight">Access Protocol</h3>
-                                    <p className="text-slate-500 text-sm mt-1">Configure your AI agent's secure key.</p>
+                                    <p className="text-slate-500 text-sm mt-1">Configure your AI agent&apos;s secure key.</p>
                                 </div>
                             </div>
 
@@ -749,7 +750,7 @@ function PreviewBotContent() {
                 {tasks.map((task) => (
                     <button
                         key={task.id}
-                        onClick={() => setActiveTask(task.id as any)}
+                        onClick={() => setActiveTask(task.id as "intro" | "config" | "voice")}
                         className={cn(
                             "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all duration-300 cursor-pointer border transform active:scale-95",
                             activeTask === task.id
