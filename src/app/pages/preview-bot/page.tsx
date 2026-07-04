@@ -63,6 +63,9 @@ function PreviewBotContent() {
             return;
         }
 
+        const widgetScriptUrl = process.env.NEXT_PUBLIC_WIDGET_URL || "https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js";
+        const chatApiUrl = process.env.NEXT_PUBLIC_CHAT_API_URL || "http://localhost:8001";
+
         const html = `
 <!DOCTYPE html>
 <html>
@@ -75,8 +78,10 @@ function PreviewBotContent() {
       #simulator-status { position: fixed; top: 10px; left: 10px; color: rgba(255,255,255,0.1); font-family: monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; pointer-events: none; z-index: 999; }
     </style>
     <script 
-      src="https://assistra-widget-stage.sgp1.cdn.digitaloceanspaces.com/widget/loader.js" 
+      src="${widgetScriptUrl}" 
       data-api-key="${apiKey}"
+      data-open="true"
+      data-api-url="${chatApiUrl}"
       ${selectedTenantId ? `data-tenant-id="${selectedTenantId}"` : ""}
       async>
     </script>
@@ -125,7 +130,7 @@ function PreviewBotContent() {
     ]);
     const [chatInput, setChatInput] = useState("");
     const [isBotTyping, setIsBotTyping] = useState(false);
-    const [chatbotConfig, setChatbotConfig] = useState<any>(null);
+    const [chatbotConfig, setChatbotConfig] = useState<{ name?: string } | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     const QUICK_ACTIONS = [
@@ -394,7 +399,7 @@ function PreviewBotContent() {
                                             <div className="flex items-center gap-3">
                                                 <StatusDot status={workspaceReadiness.find(w => w.tenant.id === selectedTenantId)?.status ?? "not_setup"} />
                                                 <select
-                                                    className="appearance-none bg-transparent text-white text-sm font-bold focus:outline-none cursor-pointer pr-8 outline-none border-none"
+                                                    className="appearance-none bg-transparent text-white text-sm font-bold focus:outline-none cursor-pointer pr-8 outline-none border-none animate-none"
                                                     value={selectedTenantId}
                                                     onChange={e => {
                                                         const id = e.target.value;
@@ -432,6 +437,63 @@ function PreviewBotContent() {
                                     </div>
                                     <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === "config" && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Bot Config</h3>
+                            {!apiKey ? (
+                                <div className="bg-[#13171F]/50 backdrop-blur-xl p-6 rounded-2xl border border-dashed border-white/10 flex flex-col items-center justify-center text-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center">
+                                        <Zap className="w-6 h-6 text-slate-600" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-white">Config Locked</h4>
+                                        <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto">Please enter your API Key first to enable dynamic configuration of your chatbot.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsKeyModalOpen(true)}
+                                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer text-white"
+                                    >
+                                        Configure API Key
+                                    </button>
+                                </div>
+                            ) : selectedTenantId && (
+                                <div className="bg-[#13171F]/80 backdrop-blur-xl p-2 rounded-2xl border border-white/5 shadow-2xl">
+                                    <ChatBotConfig
+                                        tenantId={selectedTenantId}
+                                        apiKey={apiKey}
+                                        onApiKeyChange={(key) => {
+                                            updateApiKey(key);
+                                            setTempApiKey(key);
+                                        }}
+                                        onSaveSuccess={() => setRefreshKey(prev => prev + 1)}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === "voice" && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Audio Pipeline</h3>
+                            <div className="bg-gradient-to-br from-[#13171F] to-[#0D1117] rounded-2xl border border-white/5 p-6 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-2xl">
+                                <div className="absolute inset-0 bg-indigo-500/5 pointer-events-none"></div>
+                                <div className="bg-indigo-500/10 p-4 rounded-full mb-4 relative">
+                                    <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping opacity-20"></div>
+                                    <Mic className="w-8 h-8 text-indigo-400" />
+                                </div>
+                                <h4 className="text-md font-black mb-2 text-white">Voice AI Pipeline</h4>
+                                <p className="text-slate-400 text-xs leading-relaxed max-w-xs font-medium mb-4">
+                                    We&apos;re finishing up the voice interface. You&apos;ll soon be able to talk directly to your customized assistant.
+                                </p>
+                                <div className="flex gap-2 justify-center">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="w-1.5 h-6 bg-indigo-500/30 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }}></div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -550,11 +612,8 @@ function PreviewBotContent() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4 sm:space-y-6 max-w-sm sm:max-w-md mx-auto z-10">
-                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 mb-2">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Access Restricted</span>
-                                            </div>
-                                            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-none uppercase">
+                                        <div className="relative z-10 space-y-2 sm:space-y-3 max-w-[280px]">
+                                            <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">
                                                 Premium <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Locked</span>
                                             </h3>
                                             <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
@@ -563,7 +622,7 @@ function PreviewBotContent() {
                                             <div className="pt-2 sm:pt-4 flex flex-col gap-3 w-full">
                                                 <Button
                                                     asChild
-                                                    className="w-full py-5 sm:py-6 bg-white text-[#0A0C12] hover:bg-slate-100 rounded-2xl font-black shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                                                    className="w-full py-6 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-xs uppercase tracking-widest transition-all hover:scale-102 shadow-lg shadow-orange-500/20"
                                                 >
                                                     <a href="/pages/billing">
                                                         Upgrade Now <ArrowRight className="w-4 h-4" />
@@ -576,7 +635,7 @@ function PreviewBotContent() {
                             ) : blobUrl ? (
                                 <iframe
                                     key={apiKey + refreshKey + selectedTenantId + viewMode}
-                                    src={blobUrl}
+                                    src={blobUrl || undefined}
                                     className="border-0 relative z-10 transition-all duration-500 shadow-2xl"
                                     style={{
                                         display: "block",
@@ -643,107 +702,107 @@ function PreviewBotContent() {
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
                         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowWorkspaceSelector(false)} />
                         <div className="relative w-full max-w-xl bg-[#0D1117] border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                            <div className="p-8 space-y-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                                        <Bot className="w-6 h-6 text-indigo-400" />
+                                <div className="p-8 space-y-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                                            <Bot className="w-6 h-6 text-indigo-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-black text-white">Select Workspace</h3>
+                                            <p className="text-sm text-slate-500 font-medium">Choose a workspace to preview</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-3">
+                                        {workspaceReadiness.map(ws => (
+                                            <button
+                                                key={ws.tenant.id}
+                                                onClick={() => {
+                                                    setSelectedTenantId(ws.tenant.id);
+                                                    setIsTenantSubscribed(ws.isSubscribed);
+                                                    if (ws.apiKey) { updateApiKey(ws.apiKey); setTempApiKey(ws.apiKey); setKeyValidationState("valid"); }
+                                                    localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+                                                    setShowWorkspaceSelector(false);
+                                                }}
+                                                className="group w-full text-left p-5 rounded-2xl border border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-4 cursor-pointer"
+                                            >
+                                                <StatusDot status={ws.status} />
+                                                <div className="flex-1">
+                                                    <p className="font-bold text-white text-sm">{ws.tenant.name}</p>
+                                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mt-1">Ready</p>
+                                                </div>
+                                                <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isKeyModalOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in zoom-in-95 fade-in duration-300">
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setIsKeyModalOpen(false)} />
+                            <div className="relative w-full max-w-md bg-[#0D1117] border border-white/10 rounded-3xl shadow-2xl p-8 space-y-8">
+                                <div className="flex flex-col items-center text-center gap-4">
+                                    <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                                        <Key className="w-8 h-8 text-indigo-400" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-black text-white">Select Workspace</h3>
-                                        <p className="text-sm text-slate-500 font-medium">Choose a workspace to preview</p>
+                                        <h3 className="text-2xl font-black text-white tracking-tight">Access Control</h3>
+                                        <p className="text-slate-500 text-sm font-medium mt-2">Enter your Production API Key</p>
                                     </div>
                                 </div>
-                                <div className="grid gap-3">
-                                    {workspaceReadiness.map(ws => (
+                                <div className="space-y-4">
+                                    <div className="relative group">
+                                        <Zap className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-indigo-400 transition-colors" />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            placeholder="sk_live_..."
+                                            value={tempApiKey}
+                                            onChange={e => setTempApiKey(e.target.value)}
+                                            onKeyDown={e => e.key === "Enter" && (setKeyValidationState("idle"), updateApiKey(tempApiKey), setIsKeyModalOpen(false))}
+                                            className="w-full bg-black/60 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-sm font-mono text-white placeholder:text-slate-700 outline-none focus:border-indigo-500/50 transition-all shadow-inner"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-3">
                                         <button
-                                            key={ws.tenant.id}
-                                            onClick={() => {
-                                                setSelectedTenantId(ws.tenant.id);
-                                                setIsTenantSubscribed(ws.isSubscribed);
-                                                if (ws.apiKey) { updateApiKey(ws.apiKey); setTempApiKey(ws.apiKey); setKeyValidationState("valid"); }
-                                                localStorage.setItem("simulator_last_workspace", ws.tenant.id);
-                                                setShowWorkspaceSelector(false);
-                                            }}
-                                            className="group w-full text-left p-5 rounded-2xl border border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-4 cursor-pointer"
+                                            onClick={() => { setKeyValidationState("idle"); updateApiKey(tempApiKey); setIsKeyModalOpen(false); }}
+                                            className="w-full bg-white text-[#080A10] hover:bg-slate-200 rounded-2xl py-4 font-black uppercase tracking-widest text-xs transition-all shadow-xl cursor-pointer"
                                         >
-                                            <StatusDot status={ws.status} />
-                                            <div className="flex-1">
-                                                <p className="font-bold text-white text-sm">{ws.tenant.name}</p>
-                                                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mt-1">Ready</p>
-                                            </div>
-                                            <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                            Authorize Agent
                                         </button>
-                                    ))}
+                                        <button onClick={() => setIsKeyModalOpen(false)} className="w-full bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white rounded-2xl py-4 font-bold text-xs transition-all cursor-pointer">
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {isKeyModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in zoom-in-95 fade-in duration-300">
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setIsKeyModalOpen(false)} />
-                        <div className="relative w-full max-w-md bg-[#0D1117] border border-white/10 rounded-3xl shadow-2xl p-8 space-y-8">
-                            <div className="flex flex-col items-center text-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                                    <Key className="w-8 h-8 text-indigo-400" />
-                                </div>
-                                <div>
-                                    <h3 className="text-2xl font-black text-white tracking-tight">Access Control</h3>
-                                    <p className="text-slate-500 text-sm font-medium mt-2">Enter your Production API Key</p>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="relative group">
-                                    <Zap className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-indigo-400 transition-colors" />
-                                    <input
-                                        autoFocus
-                                        type="text"
-                                        placeholder="sk_live_..."
-                                        value={tempApiKey}
-                                        onChange={e => setTempApiKey(e.target.value)}
-                                        onKeyDown={e => e.key === "Enter" && (setKeyValidationState("idle"), updateApiKey(tempApiKey), setIsKeyModalOpen(false))}
-                                        className="w-full bg-black/60 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-sm font-mono text-white placeholder:text-slate-700 outline-none focus:border-indigo-500/50 transition-all shadow-inner"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        onClick={() => { setKeyValidationState("idle"); updateApiKey(tempApiKey); setIsKeyModalOpen(false); }}
-                                        className="w-full bg-white text-[#080A10] hover:bg-slate-200 rounded-2xl py-4 font-black uppercase tracking-widest text-xs transition-all shadow-xl cursor-pointer"
-                                    >
-                                        Authorize Agent
-                                    </button>
-                                    <button onClick={() => setIsKeyModalOpen(false)} className="w-full bg-white/5 hover:bg-white/10 text-slate-500 hover:text-white rounded-2xl py-4 font-bold text-xs transition-all cursor-pointer">
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <CreateApiKeyModal
-                    isOpen={isCreateApiKeyModalOpen}
-                    onClose={(createdKey) => {
-                        setIsCreateApiKeyModalOpen(false);
-                        if (createdKey) { setKeyValidationState("idle"); updateApiKey(createdKey); setTempApiKey(createdKey); }
-                    }}
-                    onSuccess={() => { }}
-                    initialTenantId={selectedTenantId}
-                />
-            </Suspense>
-        </div>
-    );
+                    <CreateApiKeyModal
+                        isOpen={isCreateApiKeyModalOpen}
+                        onClose={(createdKey) => {
+                            setIsCreateApiKeyModalOpen(false);
+                            if (createdKey) { setKeyValidationState("idle"); updateApiKey(createdKey); setTempApiKey(createdKey); }
+                        }}
+                        onSuccess={() => { }}
+                        initialTenantId={selectedTenantId}
+                    />
+                </Suspense>
+            </div>
+        );
 }
 
-export default function PreviewBotPage() {
+            export default function PreviewBotPage() {
     return (
-        <Suspense fallback={
-            <div className="flex h-screen w-full items-center justify-center bg-[#080A10]">
-                <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
-            </div>
-        }>
-            <PreviewBotContent />
-        </Suspense>
-    );
+            <Suspense fallback={
+                <div className="flex h-screen w-full items-center justify-center bg-[#080A10]">
+                    <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
+                </div>
+            }>
+                <PreviewBotContent />
+            </Suspense>
+            );
 }
