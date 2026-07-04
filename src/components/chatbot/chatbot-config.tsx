@@ -23,6 +23,7 @@ interface ChatbotSettings {
     is_active: boolean;
     primary_color: string;
     background_color: string;
+    pattern_type: string;
     position: string;
 }
 
@@ -47,6 +48,7 @@ export function ChatBotConfig({ tenantId, apiKey, onApiKeyChange, onSaveSuccess 
         is_active: true,
         primary_color: "#000000",
         background_color: "#ffffff",
+        pattern_type: "none",
         position: "bottom-right"
     });
     const [isLoading, setIsLoading] = useState(true);
@@ -202,13 +204,14 @@ export function ChatBotConfig({ tenantId, apiKey, onApiKeyChange, onSaveSuccess 
                                 <Input
                                     id="primary-color"
                                     type="color"
-                                    className="w-12 p-1 h-10"
+                                    className="w-12 p-1 h-10 border-white/10"
                                     value={settings.primary_color}
                                     onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
                                 />
                                 <Input
                                     value={settings.primary_color}
                                     onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+                                    className="border-white/10"
                                 />
                             </div>
                         </div>
@@ -218,15 +221,42 @@ export function ChatBotConfig({ tenantId, apiKey, onApiKeyChange, onSaveSuccess 
                                 <Input
                                     id="bg-color"
                                     type="color"
-                                    className="w-12 p-1 h-10"
+                                    className="w-12 p-1 h-10 border-white/10"
                                     value={settings.background_color}
                                     onChange={(e) => setSettings({ ...settings, background_color: e.target.value })}
                                 />
                                 <Input
                                     value={settings.background_color}
                                     onChange={(e) => setSettings({ ...settings, background_color: e.target.value })}
+                                    className="border-white/10"
                                 />
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                        <Label>Background Pattern</Label>
+                        <div className="grid grid-cols-5 gap-3">
+                            {[
+                                { id: 'none', label: 'None', css: 'bg-slate-100 dark:bg-slate-800' },
+                                { id: 'waves', label: 'Waves', css: 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20' },
+                                { id: 'mesh', label: 'Mesh', css: 'bg-[radial-gradient(at_0%_0%,_var(--tw-gradient-stops))] from-indigo-500/20 via-transparent to-transparent' },
+                                { id: 'dots', label: 'Dots', css: 'bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px]' },
+                                { id: 'grid', label: 'Grid', css: 'bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] [background-size:20px_20px]' }
+                            ].map((p) => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => setSettings({ ...settings, pattern_type: p.id })}
+                                    className={`group relative flex flex-col items-center gap-2 rounded-xl border-2 p-1 transition-all hover:border-primary/50 ${
+                                        (settings as any).pattern_type === p.id 
+                                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5' 
+                                        : 'border-white/5 bg-black/20'
+                                    }`}
+                                >
+                                    <div className={`h-12 w-full rounded-lg overflow-hidden ${p.css} border border-white/5`}></div>
+                                    <span className="text-[10px] font-medium pb-1 capitalize">{p.label}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
                     <div className="flex items-center justify-between">
