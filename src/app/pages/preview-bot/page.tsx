@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useAuth } from "@/context/auth-context";
 import { cn } from "@/lib/utils";
 import {
-    Loader2, Sparkles, Layout, MessageSquare, Zap, Target, Coins, Calendar,
-    ChevronDown, X, CheckCircle2, XCircle, AlertTriangle,
-    ArrowRight, Key, Bot, Settings, Play, Shield, Copy, Check, Lock,
-    Monitor, Smartphone, Maximize2, RefreshCw, Send, Mic, User
+    Loader2, Sparkles, Zap, ChevronDown, CheckCircle2, XCircle,
+    ArrowRight, Key, Bot, Settings, Lock, Monitor, Smartphone,
+    Maximize2, RefreshCw, Mic
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // import { NoWorkspaceState } from "@/components/shared/no-workspace-state";
@@ -53,8 +52,7 @@ function PreviewBotContent() {
     const [blobUrl, setBlobUrl] = useState<string>("");
     const [viewMode, setViewMode] = useState<"auto" | "desktop" | "mobile">("auto");
     const [refreshKey, setRefreshKey] = useState(0);
-    const [keyValidationMessage, setKeyValidationMessage] = useState("");
-    const [isAutoSelected, setIsAutoSelected] = useState(false);
+
 
     // Generate Blob URL for simulator to resolve CORS/Origin null issues
     useEffect(() => {
@@ -114,33 +112,9 @@ function PreviewBotContent() {
     const [keyValidationState, setKeyValidationState] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
     const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
     const [isCreateApiKeyModalOpen, setIsCreateApiKeyModalOpen] = useState(false);
-    const [isSnippetCopied, setIsSnippetCopied] = useState(false);
 
-    // scroll-to-bottom dummy chat with typing animation
-    const [chatMessages, setChatMessages] = useState([
-        {
-            role: "bot",
-            text: "**Hi there! I'm RaKri AI.**\n\nI can help you build and deploy custom AI agents in minutes. How can I transform your business today?"
-        },
-        { role: "user", text: "I want to automate my support workload" },
-        {
-            role: "bot",
-            text: "Excellent goal. Our automation systems typically achieve:\n\n• **70% reduction** in manual ticket volume\n• **<1s average** response time\n• **24/7 coverage** across all regions\n\nWould you like to see our pricing or discuss a specific use-case?"
-        }
-    ]);
-    const [chatInput, setChatInput] = useState("");
-    const [isBotTyping, setIsBotTyping] = useState(false);
+
     const [chatbotConfig, setChatbotConfig] = useState<{ name?: string } | null>(null);
-    const chatEndRef = useRef<HTMLDivElement>(null);
-
-    const QUICK_ACTIONS = [
-        { label: "Automate Workflows", text: "How can I automate our internal workflows?", icon: Zap },
-        { label: "Reduce Costs", text: "How can AI help reduce my operational costs?", icon: Target },
-        { label: "Support AI", text: "I want to improve our customer support with AI", icon: MessageSquare },
-        { label: "Build AI Product", text: "Can you help me build a new AI-powered product?", icon: Sparkles },
-        { label: "Pricing", text: "Show me the pricing plans", icon: Coins, hiddenFromStart: true },
-        { label: "Book a Call", text: "I want to book a strategic call", icon: Calendar, link: "https://calendly.com/akshaykumar-ojha/30min", hiddenFromStart: true },
-    ];
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -149,60 +123,7 @@ function PreviewBotContent() {
         localStorage.setItem("simulator_api_key", key);
     };
 
-    const getSnippet = () => {
-        const url = process.env.NEXT_PUBLIC_WIDGET_URL ?? "http://localhost:8001/static/widget.js";
-        return `<script\n  src="${url}"\n  data-api-key="${apiKey}"\n  async>\n</script>`;
-    };
 
-    const handleCopySnippet = () => {
-        navigator.clipboard.writeText(getSnippet());
-        setIsSnippetCopied(true);
-        setTimeout(() => setIsSnippetCopied(false), 2000);
-    };
-
-    const handleChatSend = useCallback((overrideText?: string) => {
-        const msg = overrideText || chatInput.trim();
-        if (!msg) return;
-
-        if (!overrideText) setChatInput("");
-        setChatMessages(prev => [...prev, { role: "user", text: msg }]);
-        setIsBotTyping(true);
-
-        const delay = 1000 + Math.random() * 1000;
-        setTimeout(() => {
-            setIsBotTyping(false);
-            const lower = msg.toLowerCase();
-            let response = "**That's a strategic move.**\n\nRaKri AI allows you to scale at 10x velocity by automating high-frequency tasks:\n\n• **Auto-Resolution**: Handle common queries instantly.\n• **Context Sync**: Real-time knowledge retrieval.\n• **Human Handoff**: Intelligent escalation when needed.\n\nWould you like to see a **personalized demo** or explore our **pricing tiers**?";
-
-            if (lower.includes("pricing")) {
-                response = "**Our pricing is designed for scale.**\n\nWe offer three main tiers:\n\n1. **Essential ($49/mo)**: Perfect for startups.\n2. **Pro ($199/mo)**: Advanced orchestration for growing teams.\n3. **Enterprise**: Custom solutions for high-volume requirements.\n\nWould you like to **book a call** to find the absolute best fit for your workload?";
-            } else if (lower.includes("automate")) {
-                response = "**Automation is the engine of modern growth.**\n\nBy implementing RaKri AI, we can help you:\n\n• **Eliminate 60% of manual data entry**\n• **Sync cross-department communications**\n• **Trigger autonomous workflows** based on user intent.\n\nShall we look at some **specific use cases** next?";
-            } else if (lower.includes("reduce costs") || lower.includes("cost")) {
-                response = "**Efficiency leads directly to ROI.**\n\nOur partners typically see a 35% reduction in operational overhead within 90 days of implementation. This is achieved through instant response logic and intelligent triaging.\n\nShould I show you our **pricing calculator**?";
-            } else if (lower.includes("support")) {
-                response = "**AI-powered support is no longer optional.**\n\nWe provide <1s response times and 99% accuracy by pulling directly from your knowledge base. This reduces support stress and boosts NPS.\n\nWould you like to **see how the widget looks** on your site?";
-            } else if (lower.includes("book a call") || lower.includes("reserve") || lower.includes("strategic call")) {
-                response = "**I've opened our strategist's calendar for you!**\n\nOne of our experts will help you map out an AI roadmap specific to your data. Is there a particular challenge you'd like to solve in the next 30 days?";
-                window.open("https://calendly.com/akshaykumar-ojha/30min", "_blank");
-            }
-
-            setChatMessages(prev => [...prev, { role: "bot", text: response }]);
-        }, delay);
-    }, [chatInput]);
-
-    const handleQuickAction = (action: typeof QUICK_ACTIONS[0]) => {
-        if (action.link && action.label === "Book a Call") {
-            window.open(action.link, "_blank");
-            handleChatSend(action.text);
-        } else {
-            handleChatSend(action.text);
-        }
-    };
-
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [chatMessages, isBotTyping]);
 
     const handleApiKeyModalOpen = async () => {
         try {
@@ -216,8 +137,29 @@ function PreviewBotContent() {
         setIsKeyModalOpen(true);
     };
 
+    const selectWorkspace = useCallback((ws: WorkspaceReadiness) => {
+        setSelectedTenantId(ws.tenant.id);
+        setIsTenantSubscribed(ws.isSubscribed);
+        localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+
+        const savedKey = localStorage.getItem("simulator_api_key");
+        const cleanPrefix = ws.apiKey ? ws.apiKey.replace("...", "") : "";
+        const hasMatchingSavedKey = savedKey && !savedKey.includes("...") && cleanPrefix && savedKey.startsWith(cleanPrefix);
+
+        if (hasMatchingSavedKey && savedKey) {
+            updateApiKey(savedKey);
+            setTempApiKey(savedKey);
+            setKeyValidationState("valid");
+        } else {
+            updateApiKey("");
+            setTempApiKey("");
+            setKeyValidationState("idle");
+        }
+    }, []);
+
     const validateApiKey = useCallback(async (key: string) => {
         if (!key || key.length < 10) { setKeyValidationState("idle"); return; }
+        if (key.includes("...")) { setKeyValidationState("idle"); return; }
         setKeyValidationState("validating");
         try {
             const res = await fetch(`/api/widget/init-by-key?key=${key}`);
@@ -229,13 +171,11 @@ function PreviewBotContent() {
                     return;
                 }
             }
-            if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
         } catch {
-            if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
         }
-    }, [selectedTenantId]);
+    }, []);
 
     useEffect(() => {
         if (apiKey && keyValidationState !== "valid") validateApiKey(apiKey);
@@ -274,7 +214,6 @@ function PreviewBotContent() {
                 setWorkspaceReadiness(readiness);
                 const ready = readiness.filter(w => w.status === "ready");
                 const lastId = localStorage.getItem("simulator_last_workspace");
-                const savedKey = localStorage.getItem("simulator_api_key");
 
                 let wsToSelect: WorkspaceReadiness | null = null;
                 if (lastId) {
@@ -288,18 +227,7 @@ function PreviewBotContent() {
                 }
 
                 if (wsToSelect) {
-                    setSelectedTenantId(wsToSelect.tenant.id);
-                    setIsTenantSubscribed(wsToSelect.isSubscribed);
-                    if (wsToSelect.apiKey) {
-                        updateApiKey(wsToSelect.apiKey);
-                        setTempApiKey(wsToSelect.apiKey);
-                        setKeyValidationState("valid");
-                    } else if (savedKey) {
-                        updateApiKey(savedKey);
-                        setTempApiKey(savedKey);
-                        setKeyValidationState("valid");
-                    }
-                    localStorage.setItem("simulator_last_workspace", wsToSelect.tenant.id);
+                    selectWorkspace(wsToSelect);
                 }
             } catch (e) {
                 console.error("Workspace readiness check failed", e);
@@ -308,7 +236,7 @@ function PreviewBotContent() {
             }
         };
         check();
-    }, [user]);
+    }, [user, selectWorkspace]);
 
     useEffect(() => {
         if (!selectedTenantId) return;
@@ -318,11 +246,7 @@ function PreviewBotContent() {
                 if (res.ok) {
                     const config = await res.json();
                     setChatbotConfig(config);
-                    if (config.welcome_message) {
-                        setChatMessages([
-                            { role: "bot", text: `**Hi — I can help you explore how ${config.name || "AI"} can improve your business.**\n\nHere are a few ways I can assist:` }
-                        ]);
-                    }
+
                 }
             } catch (err) {
                 console.error("Failed to fetch chatbot config", err);
@@ -576,7 +500,27 @@ function PreviewBotContent() {
                 </header>
 
                 <div className="flex-1 flex flex-col overflow-hidden relative">
-                    {keyValidationState === "invalid" ? (
+                    {keyValidationState === "idle" ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-20">
+                            <div className="relative mb-6">
+                                <div className="absolute -inset-6 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
+                                <div className="relative w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                    <Key className="w-8 h-8 text-indigo-400 animate-pulse" />
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">Connect AI Agent</h3>
+                            <p className="text-slate-400 text-sm max-w-[320px] leading-relaxed mb-6 font-medium">
+                                Please configure your Production API Key to initialize the live widget preview and sandbox simulator.
+                            </p>
+                            <button
+                                onClick={handleApiKeyModalOpen}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
+                            >
+                                <Zap className="w-4 h-4 text-white" />
+                                Connect API Key
+                            </button>
+                        </div>
+                    ) : keyValidationState === "invalid" ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-20">
                             <div className="relative mb-6">
                                 <div className="absolute -inset-6 bg-red-500/10 rounded-full blur-3xl animate-pulse" />
@@ -585,19 +529,22 @@ function PreviewBotContent() {
                                 </div>
                             </div>
                             <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">Invalid API Key</h3>
-                            <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed mb-6">
+                            <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed mb-6 font-medium">
                                 The API key could not be validated. Please check it and try again.
                             </p>
                             <button
                                 onClick={() => setIsKeyModalOpen(true)}
-                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2"
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
                             >
                                 <Key className="w-4 h-4" />
                                 Update API Key
                             </button>
                         </div>
                     ) : (
-                        <div className="relative flex-1 min-h-0 overflow-auto custom-scrollbar pb-20">
+                        <div className={cn(
+                            "relative flex-1 min-h-0 flex flex-col items-center justify-center pb-6 w-full",
+                            viewMode === "auto" ? "overflow-hidden" : "overflow-auto custom-scrollbar"
+                        )}>
                              <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />
 
                             {isTenantSubscribed === false ? (
@@ -641,7 +588,7 @@ function PreviewBotContent() {
                                         display: "block",
                                         width: viewMode === "desktop" ? "1200px" : viewMode === "mobile" ? "430px" : "100%",
                                         height: viewMode === "desktop" ? "800px" : viewMode === "mobile" ? "850px" : "100%",
-                                        minHeight: viewMode === "auto" ? "750px" : "750px",
+                                        minHeight: viewMode === "auto" ? "100%" : "750px",
                                         transform: viewMode === "desktop"
                                             ? "scale(0.7)"
                                             : viewMode === "mobile"
@@ -662,39 +609,6 @@ function PreviewBotContent() {
                         </div>
                     )}
                 </div>
-
-                <footer className="relative z-30 p-8 pt-0 mt-auto">
-                    <div className="max-w-3xl mx-auto w-full space-y-6">
-                        <div className="relative group p-1 rounded-full bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/30 to-purple-500/30 rounded-full blur-xl opacity-0 group-focus-within:opacity-100 transition duration-700" />
-                            <div className="relative bg-[#13171F]/90 backdrop-blur-3xl border border-white/10 rounded-full flex items-center p-1.5 group-focus-within:border-indigo-500/50 group-focus-within:bg-[#13171F] transition-all shadow-2xl">
-                                <input
-                                    type="text"
-                                    value={chatInput}
-                                    onChange={e => setChatInput(e.target.value)}
-                                    onKeyDown={e => e.key === "Enter" && handleChatSend()}
-                                    placeholder="Ask how AI can transform your business..."
-                                    className="flex-1 bg-transparent border-none focus:ring-0 px-6 py-4 text-sm text-white placeholder:text-slate-600 outline-none font-medium"
-                                />
-                                <button
-                                    onClick={() => handleChatSend()}
-                                    disabled={!chatInput.trim() || isBotTyping}
-                                    className={cn(
-                                        "p-3.5 rounded-full transition-all duration-300 flex items-center justify-center",
-                                        chatInput.trim() && !isBotTyping
-                                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 scale-100 hover:scale-110 active:scale-90 hover:bg-indigo-500 cursor-pointer"
-                                            : "bg-white/5 text-slate-600 scale-95"
-                                    )}
-                                >
-                                    <Send className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                        <p className="text-[10px] text-center text-slate-600 font-medium">
-                            Premium AI Assistant Preview • Adaptive Context Architecture
-                        </p>
-                    </div>
-                </footer>
             </main>
 
             <Suspense fallback={null}>
@@ -717,10 +631,7 @@ function PreviewBotContent() {
                                             <button
                                                 key={ws.tenant.id}
                                                 onClick={() => {
-                                                    setSelectedTenantId(ws.tenant.id);
-                                                    setIsTenantSubscribed(ws.isSubscribed);
-                                                    if (ws.apiKey) { updateApiKey(ws.apiKey); setTempApiKey(ws.apiKey); setKeyValidationState("valid"); }
-                                                    localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+                                                    selectWorkspace(ws);
                                                     setShowWorkspaceSelector(false);
                                                 }}
                                                 className="group w-full text-left p-5 rounded-2xl border border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-4 cursor-pointer"
