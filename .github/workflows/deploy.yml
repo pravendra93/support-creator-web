@@ -1,9 +1,7 @@
 name: CI/CD Deploy
 
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,17 +20,43 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
+      # 2b. Generate lowercased image name
+      - name: Generate Image Name
+        run: |
+          echo "IMAGE_NAME=$(echo "ghcr.io/${{ github.repository }}/nextjs:latest" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       # 3. Build image
       - name: Build Docker Image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/nextjs:latest .
+          docker build -t ${{ env.IMAGE_NAME }} .
 
       # 4. Push image
       - name: Push Docker Image
         run: |
-          docker push ghcr.io/${{ github.repository }}/nextjs:latest
+          docker push ${{ env.IMAGE_NAME }}
 
-      # 5. Deploy to DO via SSH
+      # 5. Create deployment directory on droplet if not exists
+      - name: Create deployment directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p /support-creator-web
+
+      # 6. Copy docker-compose-shared.yml via SCP
+      - name: Copy Compose File
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose-shared.yml"
+          target: "/support-creator-web"
+          strip_components: 0
+
+      # 7. Deploy to DO via SSH
       - name: Deploy to Droplet
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -42,13 +66,13 @@ jobs:
           script: |
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
-            cd /home/deploy
+            cd /support-creator-web
 
-            # Pull latest images defined in docker-compose.yml
-            docker compose pull
+            # Pull latest images defined in docker-compose-shared.yml
+            docker compose -f docker-compose-shared.yml pull
 
             # Recreate containers with new image and force update
-            docker compose up -d --force-recreate
+            docker compose -f docker-compose-shared.yml up -d --force-recreate
 
             # Cleanup old images to save disk space
             docker image prune -f
