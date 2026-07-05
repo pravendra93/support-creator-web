@@ -2,9 +2,7 @@ version: "3.9"
 
 services:
   support-creator-web:
-    build: 
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/pravendra93/support-creator-web/nextjs:latest
     container_name: support-creator-web
     restart: unless-stopped
     expose:
