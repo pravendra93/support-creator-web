@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://assistra.app"),
-  title: "AssistraAI - AI Customer Support Platform | RAG-Powered Chatbots | CI/CD",
+  title: "AssistraAI - AI Customer Support Platform | RAG-Powered Chatbots",
   description: "Deploy intelligent AI chatbots trained on your business data in minutes. RAG-powered support agents that understand context, customize branding, and delight your customers 24/7.",
   keywords: "AI chatbot, customer support, RAG, retrieval augmented generation, business AI, chatbot platform",
 };
