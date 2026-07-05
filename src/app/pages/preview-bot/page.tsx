@@ -583,7 +583,27 @@ function PreviewBotContent() {
                 </header>
 
                 <div className="flex-1 flex flex-col overflow-hidden relative">
-                    {keyValidationState === "invalid" ? (
+                    {keyValidationState === "idle" ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-20">
+                            <div className="relative mb-6">
+                                <div className="absolute -inset-6 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" />
+                                <div className="relative w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                    <Key className="w-8 h-8 text-indigo-400 animate-pulse" />
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">Connect AI Agent</h3>
+                            <p className="text-slate-400 text-sm max-w-[320px] leading-relaxed mb-6 font-medium">
+                                Please configure your Production API Key to initialize the live widget preview and sandbox simulator.
+                            </p>
+                            <button
+                                onClick={handleApiKeyModalOpen}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
+                            >
+                                <Zap className="w-4 h-4 text-white" />
+                                Connect API Key
+                            </button>
+                        </div>
+                    ) : keyValidationState === "invalid" ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative z-20">
                             <div className="relative mb-6">
                                 <div className="absolute -inset-6 bg-red-500/10 rounded-full blur-3xl animate-pulse" />
@@ -592,12 +612,12 @@ function PreviewBotContent() {
                                 </div>
                             </div>
                             <h3 className="text-xl font-black text-white mb-3 uppercase tracking-tight">Invalid API Key</h3>
-                            <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed mb-6">
+                            <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed mb-6 font-medium">
                                 The API key could not be validated. Please check it and try again.
                             </p>
                             <button
                                 onClick={() => setIsKeyModalOpen(true)}
-                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2"
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
                             >
                                 <Key className="w-4 h-4" />
                                 Update API Key
