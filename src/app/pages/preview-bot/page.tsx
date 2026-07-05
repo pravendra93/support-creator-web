@@ -216,8 +216,29 @@ function PreviewBotContent() {
         setIsKeyModalOpen(true);
     };
 
+    const selectWorkspace = useCallback((ws: WorkspaceReadiness) => {
+        setSelectedTenantId(ws.tenant.id);
+        setIsTenantSubscribed(ws.isSubscribed);
+        localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+
+        const savedKey = localStorage.getItem("simulator_api_key");
+        const cleanPrefix = ws.apiKey ? ws.apiKey.replace("...", "") : "";
+        const hasMatchingSavedKey = savedKey && !savedKey.includes("...") && cleanPrefix && savedKey.startsWith(cleanPrefix);
+
+        if (hasMatchingSavedKey && savedKey) {
+            updateApiKey(savedKey);
+            setTempApiKey(savedKey);
+            setKeyValidationState("valid");
+        } else {
+            updateApiKey("");
+            setTempApiKey("");
+            setKeyValidationState("idle");
+        }
+    }, []);
+
     const validateApiKey = useCallback(async (key: string) => {
         if (!key || key.length < 10) { setKeyValidationState("idle"); return; }
+        if (key.includes("...")) { setKeyValidationState("idle"); return; }
         setKeyValidationState("validating");
         try {
             const res = await fetch(`/api/widget/init-by-key?key=${key}`);
@@ -229,13 +250,11 @@ function PreviewBotContent() {
                     return;
                 }
             }
-            if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
         } catch {
-            if (selectedTenantId) { setKeyValidationState("valid"); return; }
             setKeyValidationState("invalid");
         }
-    }, [selectedTenantId]);
+    }, []);
 
     useEffect(() => {
         if (apiKey && keyValidationState !== "valid") validateApiKey(apiKey);
@@ -274,7 +293,6 @@ function PreviewBotContent() {
                 setWorkspaceReadiness(readiness);
                 const ready = readiness.filter(w => w.status === "ready");
                 const lastId = localStorage.getItem("simulator_last_workspace");
-                const savedKey = localStorage.getItem("simulator_api_key");
 
                 let wsToSelect: WorkspaceReadiness | null = null;
                 if (lastId) {
@@ -288,18 +306,7 @@ function PreviewBotContent() {
                 }
 
                 if (wsToSelect) {
-                    setSelectedTenantId(wsToSelect.tenant.id);
-                    setIsTenantSubscribed(wsToSelect.isSubscribed);
-                    if (wsToSelect.apiKey) {
-                        updateApiKey(wsToSelect.apiKey);
-                        setTempApiKey(wsToSelect.apiKey);
-                        setKeyValidationState("valid");
-                    } else if (savedKey) {
-                        updateApiKey(savedKey);
-                        setTempApiKey(savedKey);
-                        setKeyValidationState("valid");
-                    }
-                    localStorage.setItem("simulator_last_workspace", wsToSelect.tenant.id);
+                    selectWorkspace(wsToSelect);
                 }
             } catch (e) {
                 console.error("Workspace readiness check failed", e);
@@ -308,7 +315,7 @@ function PreviewBotContent() {
             }
         };
         check();
-    }, [user]);
+    }, [user, selectWorkspace]);
 
     useEffect(() => {
         if (!selectedTenantId) return;
@@ -717,10 +724,7 @@ function PreviewBotContent() {
                                             <button
                                                 key={ws.tenant.id}
                                                 onClick={() => {
-                                                    setSelectedTenantId(ws.tenant.id);
-                                                    setIsTenantSubscribed(ws.isSubscribed);
-                                                    if (ws.apiKey) { updateApiKey(ws.apiKey); setTempApiKey(ws.apiKey); setKeyValidationState("valid"); }
-                                                    localStorage.setItem("simulator_last_workspace", ws.tenant.id);
+                                                    selectWorkspace(ws);
                                                     setShowWorkspaceSelector(false);
                                                 }}
                                                 className="group w-full text-left p-5 rounded-2xl border border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex items-center gap-4 cursor-pointer"
